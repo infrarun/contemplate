@@ -1,0 +1,89 @@
+[package]
+name = "contemplate"
+version = "1.0.0"
+edition = "2021"
+license-file = "LICENSE"
+repository = "https://github.com/infrarun/contemplate"
+authors = [
+    "infra.run",
+    "Fabian Freyer <fabs@infra.run>",
+]
+description = "A template rendering tool designed to render configuration templates."
+categories = ["command-line-utilities", "config", "template-engine"]
+keywords = ["templating", "config-management", "kubernetes"]
+exclude = [".*"]
+
+[dependencies]
+indoc = "2.0.1"
+shadow-rs = "0.26.0"
+thiserror = "1.0.40"
+serde_json = "1.0.96"
+log = "0.4.19"
+pretty_env_logger = "0.5.0"
+notify = "6.0.0"
+similar = "2.2.1"
+chrono = "0.4.26"
+file_diff = "1.0.0"
+atty = "0.2.14"
+colored = "2.0.0"
+which = "5.0.0"
+prctl = "1.0.0"
+daemonize = "0.5.0"
+async-trait = "0.1.68"
+futures = "0.3.28"
+base64 = "0.21.2"
+hex = "0.4.3"
+clap_complete = "4.3.1"
+serde_yaml = "0.9.25"
+toml = "0.8.8"
+num_cpus = "1.16.0"
+
+[dependencies.sysinfo]
+version = "0.30.5"
+default_features = false
+
+[dependencies.nix]
+version = "0.27.1"
+default_features = false
+features = ["process", "signal"]
+
+[dependencies.clap]
+version = "4.2.2"
+features = ["color"]
+
+[dependencies.figment]
+version = "0.10.8"
+features = ["env", "toml", "yaml", "json"]
+
+[dependencies.minijinja]
+version = "1.0.0"
+features = ["loader", "json", "urlencode", "custom_syntax"]
+
+[dependencies.tokio]
+version = "1.28.2"
+features = ["rt-multi-thread", "sync", "process"]
+
+[dependencies.kube]
+version = "0.87.2"
+default_features = false
+features = [
+    "client",
+    "runtime",
+    "rustls-tls",
+    "unstable-runtime",
+]
+
+[dependencies.k8s-openapi]
+version = "0.20.0"
+features = [
+    "v1_26"
+]
+
+[build-dependencies]
+shadow-rs = "0.26.0"
+
+[profile.release]
+lto = true
+panic = "abort"
+strip = true
+codegen-units = 1

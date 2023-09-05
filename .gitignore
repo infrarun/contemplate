@@ -1,0 +1,17 @@
+target/
+dist/
+
+.DS_Store
+desktop.ini
+
+*.swp
+*.swo
+Session.vim
+.cproject
+.idea
+*.iml
+.vscode
+.project
+.favorites.json
+.settings/
+.vs/

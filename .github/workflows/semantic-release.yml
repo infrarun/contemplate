@@ -1,0 +1,196 @@
+name: Release
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  get-next-version:
+    uses: semantic-release-action/next-release-version/.github/workflows/next-release-version.yml@v4
+
+  build:
+    name: build
+    if: needs.get-next-version.outputs.new-release-published == 'true'
+    runs-on: ${{ matrix.build.os }}
+    needs:
+      - get-next-version
+    env:
+      CARGO: cargo
+    strategy:
+      matrix:
+        build:
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            cross: true
+          - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+            cross: true
+          - os: ubuntu-latest
+            target: i686-unknown-linux-musl
+            cross: true
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            cross: false
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            cross: false
+          - os: macOS-latest
+            target: x86_64-apple-darwin
+            cross: false
+          - os: macOS-latest
+            target: aarch64-apple-darwin
+            cross: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install build inputs
+        if: runner.os == 'Linux' && !matrix.build.cross
+        run: sudo apt install musl-tools
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          target: ${{ matrix.build.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .cargo-cache
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install semantic-release-cargo
+        uses: taiki-e/install-action@v2
+        with:
+          tool: semantic-release-cargo@2
+
+      - name: Prepare semantic-release for Rust
+        run: semantic-release-cargo prepare ${{ needs.get-next-version.outputs.new-release-version }}
+
+      - name: Install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+
+      - name: Configure cross
+        if: matrix.build.cross
+        run: echo "CARGO=cross" >> "$GITHUB_ENV"
+
+      - name: Compile release binary
+        run: ${{ env.CARGO }} build --bin contemplate --release --target ${{ matrix.build.target }} --verbose
+
+      - name: Create release archive
+        run: |
+          mkdir dist
+          cp target/${{ matrix.build.target }}/release/contemplate dist/contemplate-${{ matrix.build.target }}
+
+      - name: Create binary checksum
+        run: shasum --algorithm 256 --binary contemplate-${{ matrix.build.target }} | tee contemplate-${{ matrix.build.target }}-SHA256SUM.txt
+        working-directory: ./dist
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.build.target }}
+          path: |
+            dist/contemplate-${{ matrix.build.target }}
+            dist/contemplate-${{ matrix.build.target }}-SHA256SUM.txt
+          if-no-files-found: error
+          retention-days: 1
+  
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs:
+      - get-next-version
+      - build
+    if: needs.get-next-version.outputs.new-release-published == 'true'
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      packages: write # to be able to publish a package
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: 'Set up Docker to use the containerd snapshotter'
+        run: |
+          cat /etc/docker/daemon.json | jq '. | .+{"features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+          docker info -f '{{ .DriverStatus }}'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - name: Cache cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .cargo-cache
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare GitHub Release artifacts
+        run: |
+          mkdir dist/
+          mv artifacts/aarch64-apple-darwin dist/
+          mv artifacts/aarch64-unknown-linux-gnu dist/
+          mv artifacts/aarch64-unknown-linux-musl dist/
+          mv artifacts/i686-unknown-linux-gnu dist/
+          mv artifacts/i686-unknown-linux-musl dist/
+          mv artifacts/x86_64-apple-darwin dist/
+          mv artifacts/x86_64-unknown-linux-gnu dist/
+          mv artifacts/x86_64-unknown-linux-musl dist/
+
+      - name: Combine checksums
+        run: cat dist/**/contemplate-*-SHA256SUM.txt | tee dist/SHA256SUMS.txt
+
+      - name: Build docker container
+        run: docker buildx build --platform linux/amd64,linux/arm64,linux/i386 --load -t infrarun/contemplate -f .ci/docker/Dockerfile . 
+
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: >
+          npx --yes
+          --package @semantic-release-cargo/semantic-release-cargo
+          --package @semantic-release/changelog
+          --package @semantic-release/git
+          --package @semantic-release-plus/docker
+          --package semantic-release
+          -- semantic-release
