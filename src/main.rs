@@ -1,4 +1,3 @@
-#![feature(iter_collect_into)]
 #![feature(iter_intersperse)]
 #![feature(exact_size_is_empty)]
 
