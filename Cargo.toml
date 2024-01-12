@@ -12,6 +12,7 @@ description = "A template rendering tool designed to render configuration templa
 categories = ["command-line-utilities", "config", "template-engine"]
 keywords = ["templating", "config-management", "kubernetes"]
 exclude = [".*"]
+rust-version = "1.72"
 
 [dependencies]
 indoc = "2.0.1"
