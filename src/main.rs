@@ -1,5 +1,4 @@
 #![feature(iter_intersperse)]
-#![feature(exact_size_is_empty)]
 
 mod cli;
 use cli::Cli;
@@ -102,7 +101,7 @@ fn run_watch(
                 .into_iter()
                 .map(|op| op.dest.path());
             // do not fire on-reload when nothing was updated.
-            if updated_files.is_empty() {
+            if updated_files.len() == 0 {
                 return;
             }
             if let Err(e) = on_reload.lock().await.execute(updated_files).await {
