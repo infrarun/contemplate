@@ -271,11 +271,7 @@ impl Cli {
 
         let mut args = vec![CString::new(binary).unwrap()];
         let binary = which::which(binary)
-            // Replace with inspect_err when result_option_inspect is stabilized
-            .map_err(|e| {
-                log::error!("Cannot find the given binary: {e}");
-                e
-            })
+            .inspect_err(|e| log::error!("Cannot find the given binary: {e}"))
             .map(|ref path| CString::new(path.to_str().unwrap()))
             .unwrap_or(CString::new(""))
             .unwrap();
