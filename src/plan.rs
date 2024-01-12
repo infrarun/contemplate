@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, Write};
+use std::io::{self, IsTerminal, Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -178,7 +178,7 @@ impl TemplateDestination {
             let new = format!("{:?}\t{}", filename, now.format("+%Y-%m-%d %H:%M:%S %z"));
 
             let mut diff = diff.unified_diff().header(&old, &new).to_string();
-            if atty::is(atty::Stream::Stderr) {
+            if std::io::stderr().is_terminal() {
                 colorize_diff(&mut diff)
             }
             eprint!("{diff}");
