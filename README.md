@@ -3,6 +3,7 @@
 [![Crates.io Version](https://img.shields.io/crates/v/contemplate)](https://crates.io/crates/contemplate)
 [![Docs](https://img.shields.io/badge/docs-green)](https://infrarun.github.io/contemplate)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/infrarun/contemplate/build.yml?branch=main)
+![Crates.io MSRV](https://img.shields.io/crates/msrv/contemplate)
 
 Contemplate is a template rendering tool designed to render configuration templates.
 While it takes inspiration from configuration management systems such as [ansible]'s [template][ansible-template] action, it is specifically not designed to be a full configuration management system.
