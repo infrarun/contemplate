@@ -57,8 +57,10 @@ impl Source for ConfigMap {
     }
 
     async fn watch(&mut self, notify: Notifier) {
-        let Ok(client) = Client::try_default().await.inspect_err(|e| {
+        // Replace with inspect_err when result_option_inspect is stabilized
+        let Ok(client) = Client::try_default().await.map_err(|e| {
             log::error!("Could not get k8s client: {e}");
+            e
         }) else {
             return;
         };
@@ -168,8 +170,10 @@ impl Source for Secret {
     }
 
     async fn watch(&mut self, notify: Notifier) {
-        let Ok(client) = Client::try_default().await.inspect_err(|e| {
+        // Replace with inspect_err when result_option_inspect is stabilized
+        let Ok(client) = Client::try_default().await.map_err(|e| {
             log::error!("Could not get k8s client: {e}");
+            e
         }) else {
             return;
         };
