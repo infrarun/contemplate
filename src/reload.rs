@@ -3,6 +3,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use crate::error::Result;
+use itertools::Itertools;
 use nix::sys::signal::{kill, Signal, SIGINT};
 use nix::unistd::Pid;
 use sysinfo::System;
@@ -79,10 +80,13 @@ impl OnReload {
         F: Iterator<Item = P>,
         P: Into<Cow<'a, Path>>,
     {
-        let contemplated_files: OsString = updated_files
-            .map(|path| path.into().as_os_str().to_owned())
-            .intersperse(OsString::from(","))
-            .collect();
+        // Replace with native intersperse when [iter_intersperse] is stabilized
+        // [iter_intersperse]: https://github.com/rust-lang/rust/issues/79524
+        let contemplated_files: OsString = Itertools::intersperse(
+            updated_files.map(|path| path.into().as_os_str().to_owned()),
+            OsString::from(","),
+        )
+        .collect();
 
         match self.action {
             OnReloadAction::None => {}
