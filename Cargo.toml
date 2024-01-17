@@ -16,7 +16,7 @@ rust-version = "1.72"
 
 [dependencies]
 indoc = "2.0.1"
-shadow-rs = "0.26.0"
+shadow-rs = "0.26.1"
 thiserror = "1.0.40"
 serde_json = "1.0.96"
 log = "0.4.19"
@@ -81,7 +81,7 @@ features = [
 ]
 
 [build-dependencies]
-shadow-rs = "0.26.0"
+shadow-rs = "0.26.1"
 
 [profile.release]
 lto = true
