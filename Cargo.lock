@@ -1152,9 +1152,9 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
 name = "minijinja"
-version = "1.0.11"
+version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "431d72874542d43aba1ca605870eacab134fdeb0c8fe27666ecf4b2662239df2"
+checksum = "fe5b00f90b3542f74bb9aaaccd2627920c16367787de103883461365580e5481"
 dependencies = [
  "aho-corasick",
  "memo-map",
