@@ -57,7 +57,7 @@ version = "0.10.14"
 features = ["env", "toml", "yaml", "json"]
 
 [dependencies.minijinja]
-version = "1.0.0"
+version = "1.0.15"
 features = ["loader", "json", "urlencode", "custom_syntax"]
 
 [dependencies.tokio]
