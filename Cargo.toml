@@ -65,7 +65,7 @@ version = "1.28.2"
 features = ["rt-multi-thread", "sync", "process"]
 
 [dependencies.kube]
-version = "0.87.2"
+version = "0.89.0"
 default_features = false
 features = [
     "client",
