@@ -154,6 +154,9 @@ fn main() -> Result<()> {
 
     let mut env = minijinja::Environment::new();
     env.set_undefined_behavior(minijinja::UndefinedBehavior::Chainable);
+    if let Some(load_path) = cli.additional_templates() {
+        env.set_loader(minijinja::path_loader(load_path));
+    }
     filters::register(&mut env);
     functions::register(&mut env);
     if let Err(e) = plan.ensure_cached(&mut env) {

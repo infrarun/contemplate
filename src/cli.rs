@@ -314,6 +314,16 @@ impl Cli {
             .or_else(|| env::var("CONTEMPLATE_K8S_NAMESPACE").ok())
     }
 
+    /// The additional-templates argument
+    ///
+    /// Attempts to take this from the `--additional-templates` argument, falling back to the `CONTEMPLATE_ADDITIONAL_TEMPLATES` environment variable.
+    pub fn additional_templates(&self) -> Option<String> {
+        self.matches
+            .get_one::<String>("additional-templates")
+            .map(ToOwned::to_owned)
+            .or_else(|| env::var("CONTEMPLATE_ADDITIONAL_TEMPLATES").ok())
+    }
+
     /// Should editing be done in-place
     pub fn in_place(&self) -> InPlace {
         if self.matches.get_occurrences::<String>("in-place").is_some() {
@@ -550,6 +560,21 @@ fn command() -> Command {
                 .action(ArgAction::Append)
                 .conflicts_with("output")
                 .conflicts_with("input"),
+        )
+        .arg(
+            Arg::new("additional-templates")
+                .long("additional-templates")
+                .short('a')
+                .action(ArgAction::Set)
+                .value_name("DIRECTORY")
+                .num_args(1)
+                .value_hint(ValueHint::DirPath)
+                .help("Directory from which additional templates are loaded.")
+                .long_help(indoc! {
+                    "Directory from which additional templates are loaded.
+
+                    Needed for 'extends', 'include' and 'import' tags."
+                }),
         )
         .arg(
             Arg::new("input")
