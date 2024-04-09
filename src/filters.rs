@@ -70,7 +70,7 @@ pub fn from_json(value: &Value) -> Result<Value, Error> {
         )
     })?;
 
-    let value = Value::from_serializable(&value);
+    let value = Value::from_serialize(value);
     Ok(value)
 }
 
@@ -89,7 +89,7 @@ pub fn from_yaml(value: &Value) -> Result<Value, Error> {
         )
     })?;
 
-    let value = Value::from_serializable(&value);
+    let value = Value::from_serialize(value);
     Ok(value)
 }
 
@@ -108,6 +108,6 @@ pub fn from_toml(value: &Value) -> Result<Value, Error> {
         )
     })?;
 
-    let value = Value::from_serializable(&value);
+    let value = Value::from_serialize(value);
     Ok(value)
 }
