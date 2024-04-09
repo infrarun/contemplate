@@ -199,6 +199,7 @@ impl TemplateDestination {
                     .read(true)
                     .write(true)
                     .create(true)
+                    .truncate(false)
                     .open(path)?;
 
                 if self.diff(path, &mut f, &templated, log_diff)? {
