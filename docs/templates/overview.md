@@ -69,3 +69,20 @@ contemplate \
     However, it is an error to specify standard input as multiple source or destination values.
 
 [minijinja-compat]: https://github.com/mitsuhiko/minijinja/blob/main/COMPATIBILITY.md
+
+## Additional templates
+
+Additional templates can be loaded from the file system with the `--additional-templates` / `-a` argument. The specified directory will be added as a search path. Template files contained within can now be referenced by their relative path. They are loaded on demand the first time they are referenced in a template.
+
+For example, if you had the following file structure:
+
+```
+extra_templates
+├── content
+│   └── news.txt
+└── macros.j2
+```
+
+Then you could call `contemplate -a extra_templates` and refer to the files as `macros.j2` and `content/news.txt`.
+
+For details on how to refer to additional templates, read the minijinja documentation about [`extends`](https://docs.rs/minijinja/latest/minijinja/syntax/index.html#-extends-), [`include`](https://docs.rs/minijinja/latest/minijinja/syntax/index.html#-include-) and [`import`](https://docs.rs/minijinja/latest/minijinja/syntax/index.html#-import-).
