@@ -68,6 +68,9 @@ optional = true
 version = "0.9.25"
 optional = true
 
+[dependencies.serde]
+version = "1.0"
+
 [dependencies.sysinfo]
 version = "0.39.3"
 default-features = false

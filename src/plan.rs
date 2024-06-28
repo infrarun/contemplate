@@ -317,7 +317,7 @@ impl TemplateOperation {
     pub fn apply(
         &mut self,
         env: &mut Environment,
-        ctx: &serde_json::Value,
+        ctx: &minijinja::Value,
         dry_run: bool,
         log_diff: bool,
     ) -> Result<bool> {
@@ -370,7 +370,7 @@ impl Plan {
     pub fn execute(
         &mut self,
         env: &mut Environment,
-        ctx: &serde_json::Value,
+        ctx: &minijinja::Value,
         dry_run: bool,
         log_diff: bool,
     ) -> Vec<&TemplateOperation> {
@@ -402,7 +402,7 @@ impl Plan {
     pub fn try_execute(
         &mut self,
         env: &mut Environment,
-        ctx: &serde_json::Value,
+        ctx: &minijinja::Value,
         dry_run: bool,
         log_diff: bool,
     ) -> Result<Vec<&TemplateOperation>> {

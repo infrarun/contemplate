@@ -431,6 +431,7 @@ dependencies = [
  "num_cpus",
  "prctl",
  "pretty_env_logger",
+ "serde",
  "serde_json",
  "serde_yaml",
  "shadow-rs",
