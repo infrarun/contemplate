@@ -16,9 +16,8 @@ fn value_as_bytes(value: &Value) -> Result<Vec<u8>, Error> {
         return Ok(string.as_bytes().into());
     }
 
-    if let Some(seq) = value.as_seq() {
+    if let Some(seq) = value.as_object().and_then(|s| s.try_iter()) {
         let bytes = seq
-            .iter()
             .map(|it| {
                 if it.is_number() {
                     u8::try_from(it).map_err(|_| {
