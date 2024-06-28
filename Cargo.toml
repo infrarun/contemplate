@@ -16,7 +16,7 @@ exclude = [".*"]
 rust-version = "1.96"
 
 [features]
-default = ["k8s", "file", "yaml", "toml", "jsonpath", "poll", "webhook"]
+default = ["k8s", "file", "yaml", "toml", "jsonpath", "poll", "webhook", "http"]
 k8s = ["dep:k8s-openapi", "dep:kube"]
 file = ["dep:toml", "dep:serde_yaml"]
 yaml = ["dep:serde_yaml"]
@@ -24,6 +24,7 @@ toml = ["dep:toml"]
 jsonpath = ["dep:jsonpath-rust"]
 poll = ["dep:humantime"]
 webhook = ["dep:axum"]
+http = ["dep:http", "dep:reqwest", "dep:arc-swap", "dep:mime", "dep:encoding_rs"]
 
 [dependencies]
 indoc = "2.0.1"
@@ -70,6 +71,7 @@ optional = true
 
 [dependencies.serde]
 version = "1.0"
+features = ["derive"]
 
 [dependencies.sysinfo]
 version = "0.39.3"
@@ -113,6 +115,27 @@ version = "0.28.0"
 features = [
     "v1_32"
 ]
+optional = true
+
+[dependencies.reqwest]
+version = "0.13.4"
+features = ["json"]
+optional = true
+
+[dependencies.http]
+version = "1.1.0"
+optional = true
+
+[dependencies.arc-swap]
+version = "1.7.1"
+optional = true
+
+[dependencies.mime]
+version = "0.3.17"
+optional = true
+
+[dependencies.encoding_rs]
+version = "0.8.34"
 optional = true
 
 [build-dependencies]

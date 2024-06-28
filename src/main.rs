@@ -107,8 +107,7 @@ fn run_watch<I: Iterator<Item = Box<dyn crate::watch::Watch + Sync + Send>>>(
             let updated_files = tokio::task::spawn_blocking(move || {
                 let mut plan = plan.blocking_lock();
                 let mut env = env.blocking_lock();
-                plan
-                    .execute(env.deref_mut(), &ctx, dry_run, diff)
+                plan.execute(env.deref_mut(), &ctx, dry_run, diff)
                     .into_iter()
                     .map(|op| op.dest.path())
                     .map(|cow| cow.into_owned())

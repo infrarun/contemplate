@@ -79,9 +79,10 @@ impl Object for ContextWithRuntime {
 
     fn enumerate(self: &Arc<Self>) -> Enumerator {
         if self.ctx.kind() == ValueKind::Map
-            && let Ok(keys) = self.ctx.try_iter() {
-                return Enumerator::Values(keys.collect());
-            }
+            && let Ok(keys) = self.ctx.try_iter()
+        {
+            return Enumerator::Values(keys.collect());
+        }
         Enumerator::Empty
     }
 }
@@ -106,4 +107,10 @@ pub fn get_runtime_handle(state: &State) -> tokio::runtime::Handle {
         .clone()
 }
 
-pub fn register(_env: &mut Environment) {}
+#[cfg(feature = "http")]
+mod http;
+
+pub fn register(#[allow(unused_variables)] env: &mut Environment) {
+    #[cfg(feature = "http")]
+    env.add_function("http", http::http_request);
+}

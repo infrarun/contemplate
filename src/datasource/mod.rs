@@ -17,6 +17,7 @@ pub use k8s::ConfigMap;
 
 use tokio::sync::mpsc;
 
+#[derive(Clone)]
 pub struct Notifier {
     tx: mpsc::Sender<()>,
 }
