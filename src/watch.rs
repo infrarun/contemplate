@@ -6,6 +6,7 @@ use tokio::sync::mpsc;
 use crate::datasource::{Notifier, SourceRegistry};
 
 pub struct WatcherRegistry<'a> {
+    pub watchers: Vec<Box<dyn Watch + Sync + Send>>,
     sources: &'a mut SourceRegistry,
     watch_tx: mpsc::Sender<()>,
     watch_rx: Option<mpsc::Receiver<()>>,
@@ -17,10 +18,15 @@ pub trait Watch: std::fmt::Debug + Send {
 }
 
 impl<'a> WatcherRegistry<'a> {
-    pub fn new(sources: &'a mut SourceRegistry) -> Self {
+    pub fn new<I: Iterator<Item = Box<dyn Watch + Sync + Send>>>(
+        sources: &'a mut SourceRegistry,
+        watchers: I,
+    ) -> Self {
         let (watch_tx, watch_rx) = mpsc::channel(1);
+        let watchers = watchers.collect();
         Self {
             sources,
+            watchers,
             watch_tx,
             watch_rx: Some(watch_rx),
         }
@@ -47,6 +53,12 @@ impl<'a> WatcherRegistry<'a> {
             source.watch(notifier).await
         }
 
+        for watcher in self.watchers.iter_mut() {
+            let notifier = Notifier::new(self.watch_tx.clone());
+            log::debug!("running watcher: {watcher:?}");
+            watcher.watch(notifier).await
+        }
+
         // Downgrade to shared reference here.
         let self_ = &*self;
 
@@ -58,5 +70,34 @@ impl<'a> WatcherRegistry<'a> {
 
             cb(self_.sources).await;
         }
+    }
+}
+
+#[cfg(feature = "poll")]
+#[derive(Debug)]
+pub struct PollWatcher {
+    interval: tokio::time::Duration,
+}
+
+#[cfg(feature = "poll")]
+impl PollWatcher {
+    pub fn new(interval: tokio::time::Duration) -> Self {
+        Self { interval }
+    }
+}
+
+#[cfg(feature = "poll")]
+#[async_trait]
+impl Watch for PollWatcher {
+    async fn watch(&mut self, notify: Notifier) {
+        let self_dbg = format!("{:?}", *self);
+        let mut interval = tokio::time::interval(self.interval);
+
+        tokio::spawn(async move {
+            loop {
+                interval.tick().await;
+                notify.notify_async(&self_dbg).await;
+            }
+        });
     }
 }

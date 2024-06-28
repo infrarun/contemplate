@@ -11,6 +11,10 @@ use crate::datasource::{Environment, Source, SourceRegistry};
 use crate::error::{Error, Result};
 use crate::plan::{Plan, TemplateDestination, TemplateOperation, TemplateSource};
 use crate::reload::{OnReloadAction, OnReloadSignalTarget};
+#[cfg(feature = "poll")]
+use clap::builder::TypedValueParser;
+#[cfg(feature = "poll")]
+use clap::builder::ValueParser;
 use clap::error::ErrorKind;
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
@@ -58,7 +62,7 @@ impl Cli {
             .iter()
             .filter(|op| !op.dest.supports_notify())
             .collect();
-        if self.watch_mode() && !notify_unsupported.is_empty() {
+        if self.watch_mode() && (!notify_unsupported.is_empty() && self.watchers().is_empty()) {
             let e = cmd.error(
                 ErrorKind::ValueValidation,
                 format!("Watch mode specified, but the following template operations don't support it: {notify_unsupported:?}"),
@@ -330,6 +334,23 @@ impl Cli {
         } else {
             false
         }
+    }
+
+    /// What watch options given
+    pub fn watchers(&self) -> Vec<Box<dyn crate::watch::Watch + Send + Sync>> {
+        #[allow(unused_mut)]
+        let mut watchers: Vec<Box<dyn crate::watch::Watch + Send + Sync>> = vec![];
+
+        #[cfg(feature = "poll")]
+        if let Some(interval) = self
+            .matches
+            .get_one::<tokio::time::Duration>("poll-interval")
+        {
+            watchers.push(Box::new(crate::watch::PollWatcher::new(
+                interval.to_owned(),
+            )));
+        }
+        watchers
     }
 
     /// Was diff arg given
@@ -724,6 +745,19 @@ fn command() -> Command {
             );
     }
 
+    #[cfg(feature = "poll")]
+    {
+        command = command.arg(
+            Arg::new("poll-interval")
+                .long("poll")
+                .short('p')
+                .help("Rerender the template in the given interval")
+                .requires("watch")
+                .value_name("INTERVAL")
+                .value_parser(ValueParser::new(HumanDurationParser {})),
+        )
+    }
+
     command
 }
 
@@ -761,6 +795,28 @@ impl From<&InPlace> for bool {
             InPlace::WithoutSuffix => true,
             InPlace::WithSuffix(_) => true,
         }
+    }
+}
+
+#[cfg(feature = "poll")]
+#[derive(Clone)]
+struct HumanDurationParser {}
+
+#[cfg(feature = "poll")]
+impl TypedValueParser for HumanDurationParser {
+    type Value = tokio::time::Duration;
+
+    fn parse_ref(
+        &self,
+        _cmd: &clap::Command,
+        _arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> std::result::Result<Self::Value, clap::Error> {
+        let s = value
+            .to_str()
+            .ok_or(clap::Error::new(clap::error::ErrorKind::InvalidUtf8))?;
+        humantime::parse_duration(s)
+            .map_err(|_| clap::Error::new(clap::error::ErrorKind::InvalidValue))
     }
 }
 

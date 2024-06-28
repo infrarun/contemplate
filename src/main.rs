@@ -57,10 +57,11 @@ fn run_oneshot(
     Ok(())
 }
 
-fn run_watch(
-    plan: &mut plan::Plan,
-    sources: &mut SourceRegistry,
-    env: &mut minijinja::Environment<'_>,
+fn run_watch<I: Iterator<Item = Box<dyn crate::watch::Watch + Sync + Send>>>(
+    plan: plan::Plan,
+    mut sources: SourceRegistry,
+    watchers: I,
+    env: minijinja::Environment<'static>,
     on_reload: &OnReload,
     dry_run: bool,
     diff: bool,
@@ -81,7 +82,7 @@ fn run_watch(
     let env = Arc::new(Mutex::new(env));
     let on_reload = Arc::new(Mutex::new(on_reload));
 
-    let mut watchers = WatcherRegistry::new(sources);
+    let mut watchers = WatcherRegistry::new(&mut sources, watchers);
 
     let task = watchers.watch(|sources| {
         let plan = plan.clone();
@@ -129,7 +130,7 @@ fn main() -> Result<()> {
 
     cli.generate_shell_completions();
 
-    let mut sources = cli.sources();
+    let sources = cli.sources();
     log::debug!("Sources: {sources:?}");
     let mut plan = cli.plan();
     log::debug!("Plan: {plan:?}");
@@ -166,7 +167,15 @@ fn main() -> Result<()> {
         }
 
         let on_reload: OnReload = cli.on_reload()?.into();
-        run_watch(&mut plan, &mut sources, &mut env, &on_reload, dry_run, diff);
+        run_watch(
+            plan,
+            sources,
+            cli.watchers().into_iter(),
+            env,
+            &on_reload,
+            dry_run,
+            diff,
+        );
     } else if let Some((path, args)) = cli.and_then_exec() {
         execv(&path, &args)?;
     }
