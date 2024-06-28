@@ -367,6 +367,7 @@ dependencies = [
  "hex",
  "indoc",
  "itertools",
+ "jsonpath-rust",
  "k8s-openapi",
  "kube",
  "log",

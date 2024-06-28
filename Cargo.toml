@@ -16,11 +16,12 @@ exclude = [".*"]
 rust-version = "1.96"
 
 [features]
-default = ["k8s", "file", "yaml", "toml"]
+default = ["k8s", "file", "yaml", "toml", "jsonpath"]
 k8s = ["dep:k8s-openapi", "dep:kube"]
 file = ["dep:toml", "dep:serde_yaml"]
 yaml = ["dep:serde_yaml"]
 toml = ["dep:toml"]
+jsonpath = ["dep:jsonpath-rust"]
 
 [dependencies]
 indoc = "2.0.1"
@@ -44,6 +45,10 @@ hex = "0.4.3"
 clap_complete = "4.5.1"
 num_cpus = "1.16.0"
 itertools = "0.15.0"
+
+[dependencies.jsonpath-rust]
+version = "1.0.4"
+optional = true
 
 [dependencies.toml]
 version = "1.1.2"

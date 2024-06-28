@@ -1,5 +1,7 @@
 use base64::Engine as _;
 use hex::ToHex;
+#[cfg(feature = "jsonpath")]
+use jsonpath_rust::JsonPath;
 use minijinja::value::{Value, ValueKind};
 use minijinja::{Environment, Error, ErrorKind};
 
@@ -11,6 +13,8 @@ pub fn register(env: &mut Environment) {
     env.add_filter("from_yaml", from_yaml);
     #[cfg(feature = "toml")]
     env.add_filter("from_toml", from_toml);
+    #[cfg(feature = "jsonpath")]
+    env.add_filter("jsonpath", jsonpath);
 }
 
 fn value_as_bytes(value: &Value) -> Result<Vec<u8>, Error> {
@@ -114,6 +118,25 @@ pub fn from_toml(value: &Value) -> Result<Value, Error> {
 
     let value = Value::from_serialize(value);
     Ok(value)
+}
+
+#[cfg(feature = "jsonpath")]
+pub fn jsonpath(value: &Value, path: &str) -> Result<Value, Error> {
+    let value = serde_json::to_value(value).map_err(|e| {
+        Error::new(
+            ErrorKind::BadSerialization,
+            format!("Could not construct JSON Value: {e}"),
+        )
+    })?;
+
+    let value = value.query(path).map_err(|e| {
+        Error::new(
+            ErrorKind::UndefinedError,
+            format!("Could not construct JSONPath: {e}"),
+        )
+    })?;
+
+    Ok(Value::from_serialize(value))
 }
 
 #[cfg(test)]
