@@ -1,5 +1,5 @@
 use super::Source;
-use crate::datasource::Result;
+use crate::{datasource::Result, watch::Watch};
 use async_trait::async_trait;
 use figment::{Figment, providers::Env};
 
@@ -14,6 +14,8 @@ impl Environment {
         Self { prefix }
     }
 }
+
+impl Watch for Environment {}
 
 #[async_trait]
 impl Source for Environment {

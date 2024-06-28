@@ -1,6 +1,7 @@
 use super::{Notifier, Source};
 use crate::datasource::{Result, ToDataSourceError};
 use crate::error::Error;
+use crate::watch::Watch;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
@@ -54,7 +55,10 @@ impl Source for File {
 
         Ok(figment)
     }
+}
 
+#[async_trait]
+impl Watch for File {
     async fn watch(&mut self, notify: Notifier) {
         let self_dbg = format!("{:?}", *self);
         let Ok(mut watcher) = RecommendedWatcher::new(

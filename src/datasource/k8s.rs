@@ -13,7 +13,7 @@ use kube::{
     runtime::{WatchStreamExt, watcher},
 };
 
-use crate::error::Error;
+use crate::{error::Error, watch::Watch};
 
 use super::{Notifier, Source, ToDataSourceError};
 
@@ -55,7 +55,10 @@ impl Source for ConfigMap {
         let figment = figment.merge(data);
         Ok(figment)
     }
+}
 
+#[async_trait]
+impl Watch for ConfigMap {
     async fn watch(&mut self, notify: Notifier) {
         let Ok(client) = Client::try_default().await.inspect_err(|e| {
             log::error!("Could not get k8s client: {e}");
@@ -166,7 +169,10 @@ impl Source for Secret {
         let figment = figment.merge(data);
         Ok(figment)
     }
+}
 
+#[async_trait]
+impl Watch for Secret {
     async fn watch(&mut self, notify: Notifier) {
         let Ok(client) = Client::try_default().await.inspect_err(|e| {
             log::error!("Could not get k8s client: {e}");

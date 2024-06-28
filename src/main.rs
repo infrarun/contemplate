@@ -9,6 +9,7 @@ use error::{Error, Result};
 pub mod datasource;
 pub mod filters;
 pub mod plan;
+pub mod watch;
 
 pub mod reload;
 use futures::FutureExt;
@@ -17,6 +18,7 @@ use reload::OnReload;
 use nix::unistd::{ForkResult, execv, fork};
 use std::{ffi::CString, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
+use watch::WatcherRegistry;
 
 fn fork_and_exec_in_parent(path: &CString, args: &[CString]) {
     let fork = unsafe { fork() };
@@ -79,7 +81,9 @@ fn run_watch(
     let env = Arc::new(Mutex::new(env));
     let on_reload = Arc::new(Mutex::new(on_reload));
 
-    let task = sources.watch(|sources| {
+    let mut watchers = WatcherRegistry::new(sources);
+
+    let task = watchers.watch(|sources| {
         let plan = plan.clone();
         let env = env.clone();
         let on_reload = on_reload.clone();
