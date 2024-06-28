@@ -1,5 +1,8 @@
 use std::pin::Pin;
 
+#[cfg(feature = "webhook")]
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
@@ -99,5 +102,44 @@ impl Watch for PollWatcher {
                 notify.notify_async(&self_dbg).await;
             }
         });
+    }
+}
+
+#[cfg(feature = "webhook")]
+#[derive(Debug)]
+pub struct WebHook {
+    listen: String,
+}
+
+#[cfg(feature = "webhook")]
+impl WebHook {
+    pub fn new(listen: String) -> Self {
+        Self { listen }
+    }
+}
+
+#[cfg(feature = "webhook")]
+#[async_trait]
+impl Watch for WebHook {
+    async fn watch(&mut self, notify: Notifier) {
+        let self_dbg = format!("{:?}", *self);
+        let listener = tokio::net::TcpListener::bind(&self.listen).await.unwrap();
+        let app = axum::Router::new()
+            .route(
+                "/",
+                axum::routing::any(
+                    |axum::extract::State((state, self_dbg)): axum::extract::State<(
+                        Arc<Notifier>,
+                        String,
+                    )>| {
+                        async move {
+                            state.notify_async(&self_dbg).await;
+                            "OK"
+                        }
+                    },
+                ),
+            )
+            .with_state((Arc::new(notify), self_dbg));
+        tokio::spawn(async { axum::serve(listener, app).await });
     }
 }

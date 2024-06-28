@@ -350,6 +350,11 @@ impl Cli {
                 interval.to_owned(),
             )));
         }
+
+        #[cfg(feature = "webhook")]
+        if let Some(listen) = self.matches.get_one::<String>("webhook") {
+            watchers.push(Box::new(crate::watch::WebHook::new(listen.clone())));
+        }
         watchers
     }
 
@@ -758,6 +763,17 @@ fn command() -> Command {
         )
     }
 
+    #[cfg(feature = "webhook")]
+    {
+        command = command.arg(
+            Arg::new("webhook")
+                .long("webhook")
+                .short('H')
+                .help("Listen on the given address, reloading on HTTP request")
+                .requires("watch")
+                .value_name("LISTEN"),
+        )
+    }
     command
 }
 

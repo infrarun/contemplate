@@ -16,13 +16,14 @@ exclude = [".*"]
 rust-version = "1.96"
 
 [features]
-default = ["k8s", "file", "yaml", "toml", "jsonpath", "poll"]
+default = ["k8s", "file", "yaml", "toml", "jsonpath", "poll", "webhook"]
 k8s = ["dep:k8s-openapi", "dep:kube"]
 file = ["dep:toml", "dep:serde_yaml"]
 yaml = ["dep:serde_yaml"]
 toml = ["dep:toml"]
 jsonpath = ["dep:jsonpath-rust"]
 poll = ["dep:humantime"]
+webhook = ["dep:axum"]
 
 [dependencies]
 indoc = "2.0.1"
@@ -49,6 +50,10 @@ itertools = "0.15.0"
 
 [dependencies.humantime]
 version = "2.1.0"
+optional = true
+
+[dependencies.axum]
+version = "0.8.9"
 optional = true
 
 [dependencies.jsonpath-rust]
