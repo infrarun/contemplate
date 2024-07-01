@@ -3,8 +3,9 @@ use std::env;
 use std::ffi::CString;
 use std::hash::Hash;
 
-use crate::datasource::k8s::Secret;
-use crate::datasource::{ConfigMap, Environment, File, Source, SourceRegistry};
+#[cfg(feature = "k8s")]
+use crate::datasource::k8s::{ConfigMap, Secret};
+use crate::datasource::{Environment, File, Source, SourceRegistry};
 use crate::error::{Error, Result};
 use crate::plan::{Plan, TemplateDestination, TemplateOperation, TemplateSource};
 use crate::reload::{OnReloadAction, OnReloadSignalTarget};
@@ -82,7 +83,9 @@ impl Cli {
                 Some(prefix) if prefix.as_ref().is_empty() => None,
                 prefix => prefix,
             })),
+            #[cfg(feature = "k8s")]
             "k8s-configmap" => Box::new(ConfigMap::new(arg.unwrap(), self.k8s_namespace())),
+            #[cfg(feature = "k8s")]
             "k8s-secret" => Box::new(Secret::new(arg.unwrap(), self.k8s_namespace())),
             _ => unreachable!(),
         }
@@ -111,19 +114,26 @@ impl Cli {
             .into_iter()
             .flatten();
 
-        let mut sources = ["file", "environment", "k8s-configmap", "k8s-secret"]
-            .into_iter()
-            .flat_map(|source_type| {
-                std::iter::zip(
-                    self.matches
-                        .get_occurrences::<String>(source_type)
-                        .unwrap_or_default()
-                        .map(|mut occurrence| occurrence.next()),
-                    self.matches.indices_of(source_type).unwrap_or_default(),
-                )
-                .map(move |(value, index)| (source_type, value, index))
-            })
-            .collect::<Vec<(&str, Option<&String>, usize)>>();
+        let mut sources = [
+            "file",
+            "environment",
+            #[cfg(feature = "k8s")]
+            "k8s-configmap",
+            #[cfg(feature = "k8s")]
+            "k8s-secret",
+        ]
+        .into_iter()
+        .flat_map(|source_type| {
+            std::iter::zip(
+                self.matches
+                    .get_occurrences::<String>(source_type)
+                    .unwrap_or_default()
+                    .map(|mut occurrence| occurrence.next()),
+                self.matches.indices_of(source_type).unwrap_or_default(),
+            )
+            .map(move |(value, index)| (source_type, value, index))
+        })
+        .collect::<Vec<(&str, Option<&String>, usize)>>();
 
         sources.sort_by_key(|(_, _, a)| *a);
 
@@ -288,6 +298,7 @@ impl Cli {
     /// The k8s-namespace argument
     ///
     /// Attempts to take this from the `--k8s-namespace` argument, falling back to the `CONTEMPLATE_K8S_NAMESPACE` environment variable.
+    #[cfg(feature = "k8s")]
     pub fn k8s_namespace(&self) -> Option<String> {
         self.matches
             .get_one::<String>("k8s-namespace")
@@ -400,7 +411,8 @@ fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
 }
 
 fn command() -> Command {
-    Command::new("contemplate")
+    #[allow(unused_mut)] // Mutability only required when features enabled.
+    let mut command = Command::new("contemplate")
         .about("The friendly cloud-native config templating tool")
         .author("infra.run")
         .version(build::CLAP_LONG_VERSION)
@@ -458,49 +470,6 @@ fn command() -> Command {
                 .action(ArgAction::Append),
         )
         .arg(
-            Arg::new("k8s-namespace")
-                .long("k8s-namespace")
-                .alias("ns")
-                .help("Specify a k8s namespace to use")
-                .long_help(indoc! {
-                    "When using k8s datasources, specify a namespace to use"
-                })
-                .value_name("NAME")
-                .value_hint(ValueHint::Other)
-                .action(ArgAction::Set),
-        )
-        .arg(
-            Arg::new("k8s-configmap")
-                .long("k8s-configmap")
-                .alias("cm")
-                .help("Add a kubernetes configmap as data source")
-                .long_help(indoc! {
-                    "Add a kubernetes configmap as a data source for template variables.
-                    A kubernetes service account credential needs to be present in
-                    /var/run/secrets/kubernetes.io/serviceaccount/token.
-                    
-                    Can be specified multiple times to add multiple config maps"
-                })
-                .value_name("NAME")
-                .value_hint(ValueHint::Other)
-                .action(ArgAction::Append),
-        )
-        .arg(
-            Arg::new("k8s-secret")
-                .long("k8s-secret")
-                .help("Add a kubernetes secret as data source")
-                .long_help(indoc! {
-                    "Add a kubernetes secret as a data source for template variables.
-                    A kubernetes service account credential needs to be present in
-                    /var/run/secrets/kubernetes.io/serviceaccount/token.
-
-                    Can be specified multiple times to add multiple secret"
-                })
-                .value_name("NAME")
-                .value_hint(ValueHint::Other)
-                .action(ArgAction::Append),
-        )
-        .arg(
             Arg::new("file")
                 .short('f')
                 .long("file")
@@ -517,7 +486,14 @@ fn command() -> Command {
         )
         .group(
             ArgGroup::new("datasources")
-                .args(["k8s-configmap", "k8s-secret", "environment", "file"])
+                .args([
+                    #[cfg(feature = "k8s")]
+                    "k8s-configmap",
+                    #[cfg(feature = "k8s")]
+                    "k8s-secret",
+                    "environment",
+                    "file",
+                ])
                 .multiple(true),
         )
         .arg(
@@ -689,7 +665,57 @@ fn command() -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Run as a daemon")
                 .requires("watch"),
-        )
+        );
+
+    #[cfg(feature = "k8s")]
+    {
+        command = command
+            .arg(
+                Arg::new("k8s-namespace")
+                    .long("k8s-namespace")
+                    .alias("ns")
+                    .help("Specify a k8s namespace to use")
+                    .long_help(indoc! {
+                        "When using k8s datasources, specify a namespace to use"
+                    })
+                    .value_name("NAME")
+                    .value_hint(ValueHint::Other)
+                    .action(ArgAction::Set),
+            )
+            .arg(
+                Arg::new("k8s-configmap")
+                    .long("k8s-configmap")
+                    .alias("cm")
+                    .help("Add a kubernetes configmap as data source")
+                    .long_help(indoc! {
+                        "Add a kubernetes configmap as a data source for template variables.
+                    A kubernetes service account credential needs to be present in
+                    /var/run/secrets/kubernetes.io/serviceaccount/token.
+
+                    Can be specified multiple times to add multiple config maps"
+                    })
+                    .value_name("NAME")
+                    .value_hint(ValueHint::Other)
+                    .action(ArgAction::Append),
+            )
+            .arg(
+                Arg::new("k8s-secret")
+                    .long("k8s-secret")
+                    .help("Add a kubernetes secret as data source")
+                    .long_help(indoc! {
+                        "Add a kubernetes secret as a data source for template variables.
+                    A kubernetes service account credential needs to be present in
+                    /var/run/secrets/kubernetes.io/serviceaccount/token.
+
+                    Can be specified multiple times to add multiple secret"
+                    })
+                    .value_name("NAME")
+                    .value_hint(ValueHint::Other)
+                    .action(ArgAction::Append),
+            );
+    }
+
+    command
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]

@@ -32,6 +32,7 @@ pub enum Error {
     #[error("Invalid signal argument")]
     CliInvalidSignal,
 
+    #[cfg(feature = "k8s")]
     #[error("K8s Error: {0}")]
     KubeError(#[from] kube::Error),
 

@@ -11,7 +11,9 @@ pub use file::File;
 mod env;
 pub use env::Environment;
 
+#[cfg(feature = "k8s")]
 pub mod k8s;
+#[cfg(feature = "k8s")]
 pub use k8s::ConfigMap;
 
 use tokio::sync::mpsc;
