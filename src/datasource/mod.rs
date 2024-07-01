@@ -5,7 +5,9 @@ use std::{
 
 use async_trait::async_trait;
 use figment::Figment;
+#[cfg(feature = "file")]
 mod file;
+#[cfg(feature = "file")]
 pub use file::File;
 
 mod env;

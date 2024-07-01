@@ -3,9 +3,11 @@ use std::env;
 use std::ffi::CString;
 use std::hash::Hash;
 
+#[cfg(feature = "file")]
+use crate::datasource::File;
 #[cfg(feature = "k8s")]
 use crate::datasource::k8s::{ConfigMap, Secret};
-use crate::datasource::{Environment, File, Source, SourceRegistry};
+use crate::datasource::{Environment, Source, SourceRegistry};
 use crate::error::{Error, Result};
 use crate::plan::{Plan, TemplateDestination, TemplateOperation, TemplateSource};
 use crate::reload::{OnReloadAction, OnReloadSignalTarget};
@@ -77,12 +79,13 @@ impl Cli {
         S2: AsRef<str>,
     {
         match source_type.as_ref() {
-            "file" => Box::new(File::new(arg.unwrap().as_ref())),
             "environment" => Box::new(Environment::new(match arg {
                 None => None,
                 Some(prefix) if prefix.as_ref().is_empty() => None,
                 prefix => prefix,
             })),
+            #[cfg(feature = "file")]
+            "file" => Box::new(File::new(arg.unwrap().as_ref())),
             #[cfg(feature = "k8s")]
             "k8s-configmap" => Box::new(ConfigMap::new(arg.unwrap(), self.k8s_namespace())),
             #[cfg(feature = "k8s")]
@@ -115,8 +118,9 @@ impl Cli {
             .flatten();
 
         let mut sources = [
-            "file",
             "environment",
+            #[cfg(feature = "file")]
+            "file",
             #[cfg(feature = "k8s")]
             "k8s-configmap",
             #[cfg(feature = "k8s")]
@@ -469,21 +473,6 @@ fn command() -> Command {
                 .value_hint(ValueHint::Other)
                 .action(ArgAction::Append),
         )
-        .arg(
-            Arg::new("file")
-                .short('f')
-                .long("file")
-                .help("Add a file as a data source")
-                .long_help(indoc! {
-                    "Add a file as a data source. The file must be a valid JSON, YAML, TOML, ini,
-                    JSON5 or RON file. The file format is guessed using its file extension.
-                    
-                    Can be specified multiple times to add multiple file data sources"
-                })
-                .value_name("PATH")
-                .value_hint(ValueHint::FilePath)
-                .action(ArgAction::Append),
-        )
         .group(
             ArgGroup::new("datasources")
                 .args([
@@ -491,8 +480,9 @@ fn command() -> Command {
                     "k8s-configmap",
                     #[cfg(feature = "k8s")]
                     "k8s-secret",
-                    "environment",
+                    #[cfg(feature = "file")]
                     "file",
+                    "environment",
                 ])
                 .multiple(true),
         )
@@ -666,6 +656,25 @@ fn command() -> Command {
                 .help("Run as a daemon")
                 .requires("watch"),
         );
+
+    #[cfg(feature = "file")]
+    {
+        command = command.arg(
+            Arg::new("file")
+                .short('f')
+                .long("file")
+                .help("Add a file as a data source")
+                .long_help(indoc! {
+                    "Add a file as a data source. The file must be a valid JSON, YAML, TOML, ini,
+                    JSON5 or RON file. The file format is guessed using its file extension.
+
+                    Can be specified multiple times to add multiple file data sources"
+                })
+                .value_name("PATH")
+                .value_hint(ValueHint::FilePath)
+                .action(ArgAction::Append),
+        )
+    }
 
     #[cfg(feature = "k8s")]
     {

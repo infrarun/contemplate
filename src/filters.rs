@@ -7,7 +7,9 @@ pub fn register(env: &mut Environment) {
     env.add_filter("base64encode", base64encode);
     env.add_filter("hexencode", hexencode);
     env.add_filter("from_json", from_json);
+    #[cfg(feature = "yaml")]
     env.add_filter("from_yaml", from_yaml);
+    #[cfg(feature = "toml")]
     env.add_filter("from_toml", from_toml);
 }
 
@@ -74,6 +76,7 @@ pub fn from_json(value: &Value) -> Result<Value, Error> {
     Ok(value)
 }
 
+#[cfg(feature = "yaml")]
 pub fn from_yaml(value: &Value) -> Result<Value, Error> {
     let Some(value) = value.as_str() else {
         return Err(Error::new(
@@ -93,6 +96,7 @@ pub fn from_yaml(value: &Value) -> Result<Value, Error> {
     Ok(value)
 }
 
+#[cfg(feature = "toml")]
 pub fn from_toml(value: &Value) -> Result<Value, Error> {
     let Some(value) = value.as_str() else {
         return Err(Error::new(

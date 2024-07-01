@@ -16,8 +16,11 @@ exclude = [".*"]
 rust-version = "1.96"
 
 [features]
-default = ["k8s"]
+default = ["k8s", "file", "yaml", "toml"]
 k8s = ["dep:k8s-openapi", "dep:kube"]
+file = ["dep:toml", "dep:serde_yaml"]
+yaml = ["dep:serde_yaml"]
+toml = ["dep:toml"]
 
 [dependencies]
 indoc = "2.0.1"
@@ -39,10 +42,16 @@ futures = "0.3.28"
 base64 = "0.22.1"
 hex = "0.4.3"
 clap_complete = "4.5.1"
-serde_yaml = "0.9.25"
-toml = "1.1.2"
 num_cpus = "1.16.0"
 itertools = "0.15.0"
+
+[dependencies.toml]
+version = "1.1.2"
+optional = true
+
+[dependencies.serde_yaml]
+version = "0.9.25"
+optional = true
 
 [dependencies.sysinfo]
 version = "0.39.3"
