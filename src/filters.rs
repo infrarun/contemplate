@@ -111,3 +111,68 @@ pub fn from_toml(value: &Value) -> Result<Value, Error> {
     let value = Value::from_serialize(value);
     Ok(value)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_base64encode_string() {
+        let value = Value::from_safe_string(String::from("hello"));
+        let base64 = base64encode(&value).unwrap();
+        assert_eq!(base64, "aGVsbG8=")
+    }
+
+    #[test]
+    fn test_base64encode_byte_seq() {
+        let value = Value::from_serialize(&[1, 2, 3, 4]);
+        let base64 = base64encode(&value).unwrap();
+        assert_eq!(base64, "AQIDBA==")
+    }
+
+    #[test]
+    fn test_base64encode_non_byte_seq() {
+        let value = Value::from_serialize(&[257]);
+        let error = base64encode(&value).unwrap_err();
+        assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
+        assert_eq!(error.detail(), Some("Invalid sequence (not u8)!"));
+    }
+
+    #[test]
+    fn test_base64encode_non_numeric_seq() {
+        let value = Value::from_serialize(&["hello"]);
+        let error = base64encode(&value).unwrap_err();
+        assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
+        assert_eq!(error.detail(), Some("Invalid sequence (not numeric)!"));
+    }
+
+    #[test]
+    fn test_hexencode_string() {
+        let value = Value::from_safe_string("Hello".into());
+        let hex = hexencode(&value).unwrap();
+        assert_eq!(hex, "48656c6c6f");
+    }
+
+    #[test]
+    fn test_hexencode_bytes() {
+        let value = Value::from_serialize(&[1, 2, 3, 4]);
+        let hex = hexencode(&value).unwrap();
+        assert_eq!(hex, "01020304");
+    }
+
+    #[test]
+    fn test_hexencode_non_byte_seq() {
+        let value = Value::from_serialize(&[257]);
+        let error = hexencode(&value).unwrap_err();
+        assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
+        assert_eq!(error.detail(), Some("Invalid sequence (not u8)!"));
+    }
+
+    #[test]
+    fn test_hexencode_non_numeric_seq() {
+        let value = Value::from_serialize(&["hello"]);
+        let error = hexencode(&value).unwrap_err();
+        assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
+        assert_eq!(error.detail(), Some("Invalid sequence (not numeric)!"));
+    }
+}
