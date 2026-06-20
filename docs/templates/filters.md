@@ -1,9 +1,9 @@
 # Filters
 
-The following filters were added to Contemplate. For a full list of filters, see the output of the `debug()` function:
+The following filters were added to Contemplate. For a full list of filters available (including built-ins), use the `debug()` function:
 
 ```bash
-echo "{{ debug().env.filters }}" | contemplate
+echo "{{ debug() }}" | contemplate
 ```
 
 ## base64encode
@@ -24,7 +24,7 @@ Example:
 
 ## hexencode
 
-This hex-encodes a string or a list of bytes, returning a base64 encoded string.
+This hex-encodes a string or a list of bytes, returning a hex encoded string.
 
 Example:
 === "Template"
@@ -59,7 +59,7 @@ Constructs an object from a TOML string.
 Example:
 === "Template"
     ```jinja2
-    The color is {{ ('color="orange"' | from_toml).color }}
+    The color is {{ ('color = "orange"' | from_toml).color }}
     ```
 === "Rendered"
     ```
@@ -79,3 +79,23 @@ Example:
     ```
     The color is purple
     ```
+
+## jsonpath
+
+Queries an object using a [JSONPath] expression, returning a list of matching values.
+
+Example:
+=== "Template"
+    ```jinja2
+    {% set data = '{"users": [{"name": "Alice"}, {"name": "Bob"}]}' | from_json -%}
+    {% for name in data | jsonpath("$.users[*].name") %}
+    - {{ name }}
+    {%- endfor %}
+    ```
+=== "Rendered"
+    ```
+    - Alice
+    - Bob
+    ```
+
+[JSONPath]: https://goessner.net/articles/JsonPath/

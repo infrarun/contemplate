@@ -17,7 +17,7 @@ contemplate --file data.yml --env
 Data sources can furthermore be specified using the `CONTEMPLATE_DATASOURCES` environment variable. This should contain a comma-separated list of data source specifications, each of which is of the form `<type>[:<argument>]`:
 
 ```bash
-env CONTEMPLATE_DATASOURCES="file:data.yml,env" contemplate
+env CONTEMPLATE_DATASOURCES="file:data.yml,environment" contemplate
 ```
 
 Data sources specified in the `CONTEMPLATE_DATASOURCES` environment variable are evaluated in order left-to-right, just like command-line arguments. However, they can be overridden using command-line arguments.

@@ -1,6 +1,6 @@
 # Taking Data From The Environment
 
-Environment variables are specified as a data source using the `--env` / `-e` command-line argument or the `env` prefix in the `CONTEMPLATE_DATASOURCES` environment variable:
+Environment variables are specified as a data source using the `--env` / `-e` command-line argument or the `environment` prefix in the `CONTEMPLATE_DATASOURCES` environment variable:
 
 === "Command-Line"
     ```bash
@@ -8,7 +8,7 @@ Environment variables are specified as a data source using the `--env` / `-e` co
     ```
 === "Environment"
     ```bash
-    env CONTEMPLATE_DATASOURCES="env" contemplate
+    env CONTEMPLATE_DATASOURCES="environment" contemplate
     ```
 
 Since the environment variables of the contemplate process cannot be changed during runtime, environment data sources do not support live-reloading.
@@ -24,11 +24,11 @@ In the following example, only the environment variables `FOO_BAR` and `FOO_BAZ`
 
 === "Command-Line"
     ```bash
-    env FOO_BAR=1 FOO_BAZ=2, QUX=3 contemplate --env=FOO
+    env FOO_BAR=1 FOO_BAZ=2 QUX=3 contemplate --env=FOO
     ```
 === "Environment"
     ```bash
-    env CONTEMPLATE_DATASOURCES="env:FOO" FOO_BAR=1 FOO_BAZ=2, QUX=3 contemplate
+    env CONTEMPLATE_DATASOURCES="environment:FOO" FOO_BAR=1 FOO_BAZ=2 QUX=3 contemplate
     ```
 
 After processing, the context will contain the following values, since the prefix is dropped:

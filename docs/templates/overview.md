@@ -2,6 +2,8 @@
 
 Templates are content written in `minijinja`, a templating language [close to `jinja2`][minijinja-compat].
 
+Contemplate provides additional [filters](filters.md) and [functions](functions.md) on top of the standard minijinja built-ins.
+
 ## Standard In-/Output
 By default, Contemplate will read a template on standard input, and write to standard output:
 
@@ -30,7 +32,7 @@ An input file can be specified as a positional argument:
 ```bash
 $ export NAME="Charlie"
 $ echo 'Hello, I am {{ name }}!' > template.txt
-$ contemplate --env template.txt
+$ contemplate template.txt --env
 Hello, I am Charlie!
 $
 ```
