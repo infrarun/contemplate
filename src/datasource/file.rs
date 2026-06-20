@@ -1,12 +1,13 @@
 use super::{Notifier, Source};
 use crate::datasource::{Result, ToDataSourceError};
 use crate::error::Error;
+use crate::watch::Watch;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use figment::{
-    providers::{Format, Json, Toml, YamlExtended},
     Figment,
+    providers::{Format, Json, Toml, YamlExtended},
 };
 
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
@@ -42,19 +43,22 @@ impl Source for File {
                 return Err(Error::UnknownFileExtension {
                     ext: ext.to_owned(),
                 })
-                .fatal()
+                .fatal();
             }
             None => {
                 return Err(Error::UnknownFileType {
                     path: self.path.to_owned(),
                 })
-                .fatal()
+                .fatal();
             }
         };
 
         Ok(figment)
     }
+}
 
+#[async_trait]
+impl Watch for File {
     async fn watch(&mut self, notify: Notifier) {
         let self_dbg = format!("{:?}", *self);
         let Ok(mut watcher) = RecommendedWatcher::new(

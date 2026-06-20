@@ -3,14 +3,21 @@ use std::env;
 use std::ffi::CString;
 use std::hash::Hash;
 
-use crate::datasource::k8s::Secret;
-use crate::datasource::{ConfigMap, Environment, File, Source, SourceRegistry};
+#[cfg(feature = "file")]
+use crate::datasource::File;
+#[cfg(feature = "k8s")]
+use crate::datasource::k8s::{ConfigMap, Secret};
+use crate::datasource::{Environment, Source, SourceRegistry};
 use crate::error::{Error, Result};
 use crate::plan::{Plan, TemplateDestination, TemplateOperation, TemplateSource};
 use crate::reload::{OnReloadAction, OnReloadSignalTarget};
+#[cfg(feature = "poll")]
+use clap::builder::TypedValueParser;
+#[cfg(feature = "poll")]
+use clap::builder::ValueParser;
 use clap::error::ErrorKind;
-use clap::{value_parser, Arg, ArgAction, ArgGroup, ArgMatches, Command, ValueHint};
-use clap_complete::{generate, Generator, Shell};
+use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, ValueHint, value_parser};
+use clap_complete::{Generator, Shell, generate};
 use indoc::indoc;
 use nix::sys::signal::Signal;
 use shadow_rs::shadow;
@@ -55,7 +62,7 @@ impl Cli {
             .iter()
             .filter(|op| !op.dest.supports_notify())
             .collect();
-        if self.watch_mode() && !notify_unsupported.is_empty() {
+        if self.watch_mode() && (!notify_unsupported.is_empty() && self.watchers().is_empty()) {
             let e = cmd.error(
                 ErrorKind::ValueValidation,
                 format!("Watch mode specified, but the following template operations don't support it: {notify_unsupported:?}"),
@@ -76,13 +83,16 @@ impl Cli {
         S2: AsRef<str>,
     {
         match source_type.as_ref() {
-            "file" => Box::new(File::new(arg.unwrap().as_ref())),
             "environment" => Box::new(Environment::new(match arg {
                 None => None,
                 Some(prefix) if prefix.as_ref().is_empty() => None,
                 prefix => prefix,
             })),
+            #[cfg(feature = "file")]
+            "file" => Box::new(File::new(arg.unwrap().as_ref())),
+            #[cfg(feature = "k8s")]
             "k8s-configmap" => Box::new(ConfigMap::new(arg.unwrap(), self.k8s_namespace())),
+            #[cfg(feature = "k8s")]
             "k8s-secret" => Box::new(Secret::new(arg.unwrap(), self.k8s_namespace())),
             _ => unreachable!(),
         }
@@ -111,22 +121,29 @@ impl Cli {
             .into_iter()
             .flatten();
 
-        let mut sources = ["file", "environment", "k8s-configmap", "k8s-secret"]
-            .into_iter()
-            .flat_map(|source_type| {
-                let files = std::iter::zip(
-                    self.matches
-                        .get_occurrences::<String>(source_type)
-                        .unwrap_or_default()
-                        .map(|mut occurrence| occurrence.next()),
-                    self.matches.indices_of(source_type).unwrap_or_default(),
-                )
-                .map(move |(value, index)| (source_type, value, index));
-                files
-            })
-            .collect::<Vec<(&str, Option<&String>, usize)>>();
+        let mut sources = [
+            "environment",
+            #[cfg(feature = "file")]
+            "file",
+            #[cfg(feature = "k8s")]
+            "k8s-configmap",
+            #[cfg(feature = "k8s")]
+            "k8s-secret",
+        ]
+        .into_iter()
+        .flat_map(|source_type| {
+            std::iter::zip(
+                self.matches
+                    .get_occurrences::<String>(source_type)
+                    .unwrap_or_default()
+                    .map(|mut occurrence| occurrence.next()),
+                self.matches.indices_of(source_type).unwrap_or_default(),
+            )
+            .map(move |(value, index)| (source_type, value, index))
+        })
+        .collect::<Vec<(&str, Option<&String>, usize)>>();
 
-        sources.sort_by(|(_, _, a), (_, _, b)| a.cmp(b));
+        sources.sort_by_key(|(_, _, a)| *a);
 
         let sources_from_args =
             sources
@@ -271,11 +288,7 @@ impl Cli {
 
         let mut args = vec![CString::new(binary).unwrap()];
         let binary = which::which(binary)
-            // Replace with inspect_err when result_option_inspect is stabilized
-            .map_err(|e| {
-                log::error!("Cannot find the given binary: {e}");
-                e
-            })
+            .inspect_err(|e| log::error!("Cannot find the given binary: {e}"))
             .map(|ref path| CString::new(path.to_str().unwrap()))
             .unwrap_or(CString::new(""))
             .unwrap();
@@ -293,11 +306,22 @@ impl Cli {
     /// The k8s-namespace argument
     ///
     /// Attempts to take this from the `--k8s-namespace` argument, falling back to the `CONTEMPLATE_K8S_NAMESPACE` environment variable.
+    #[cfg(feature = "k8s")]
     pub fn k8s_namespace(&self) -> Option<String> {
         self.matches
             .get_one::<String>("k8s-namespace")
             .map(ToOwned::to_owned)
             .or_else(|| env::var("CONTEMPLATE_K8S_NAMESPACE").ok())
+    }
+
+    /// The additional-templates argument
+    ///
+    /// Attempts to take this from the `--additional-templates` argument, falling back to the `CONTEMPLATE_ADDITIONAL_TEMPLATES` environment variable.
+    pub fn additional_templates(&self) -> Option<String> {
+        self.matches
+            .get_one::<String>("additional-templates")
+            .map(ToOwned::to_owned)
+            .or_else(|| env::var("CONTEMPLATE_ADDITIONAL_TEMPLATES").ok())
     }
 
     /// Should editing be done in-place
@@ -320,6 +344,28 @@ impl Cli {
         } else {
             false
         }
+    }
+
+    /// What watch options given
+    pub fn watchers(&self) -> Vec<Box<dyn crate::watch::Watch + Send + Sync>> {
+        #[allow(unused_mut)]
+        let mut watchers: Vec<Box<dyn crate::watch::Watch + Send + Sync>> = vec![];
+
+        #[cfg(feature = "poll")]
+        if let Some(interval) = self
+            .matches
+            .get_one::<tokio::time::Duration>("poll-interval")
+        {
+            watchers.push(Box::new(crate::watch::PollWatcher::new(
+                interval.to_owned(),
+            )));
+        }
+
+        #[cfg(feature = "webhook")]
+        if let Some(listen) = self.matches.get_one::<String>("webhook") {
+            watchers.push(Box::new(crate::watch::WebHook::new(listen.clone())));
+        }
+        watchers
     }
 
     /// Was diff arg given
@@ -395,12 +441,18 @@ impl Cli {
     }
 }
 
-fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
-    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
+    generate(
+        generator,
+        cmd,
+        cmd.get_name().to_string(),
+        &mut std::io::stdout(),
+    );
 }
 
 fn command() -> Command {
-    Command::new("contemplate")
+    #[allow(unused_mut)] // Mutability only required when features enabled.
+    let mut command = Command::new("contemplate")
         .about("The friendly cloud-native config templating tool")
         .author("infra.run")
         .version(build::CLAP_LONG_VERSION)
@@ -457,67 +509,17 @@ fn command() -> Command {
                 .value_hint(ValueHint::Other)
                 .action(ArgAction::Append),
         )
-        .arg(
-            Arg::new("k8s-namespace")
-                .long("k8s-namespace")
-                .alias("ns")
-                .help("Specify a k8s namespace to use")
-                .long_help(indoc! {
-                    "When using k8s datasources, specify a namespace to use"
-                })
-                .value_name("NAME")
-                .value_hint(ValueHint::Other)
-                .action(ArgAction::Set),
-        )
-        .arg(
-            Arg::new("k8s-configmap")
-                .long("k8s-configmap")
-                .alias("cm")
-                .help("Add a kubernetes configmap as data source")
-                .long_help(indoc! {
-                    "Add a kubernetes configmap as a data source for template variables.
-                    A kubernetes service account credential needs to be present in
-                    /var/run/secrets/kubernetes.io/serviceaccount/token.
-                    
-                    Can be specified multiple times to add multiple config maps"
-                })
-                .value_name("NAME")
-                .value_hint(ValueHint::Other)
-                .action(ArgAction::Append),
-        )
-        .arg(
-            Arg::new("k8s-secret")
-                .long("k8s-secret")
-                .help("Add a kubernetes secret as data source")
-                .long_help(indoc! {
-                    "Add a kubernetes secret as a data source for template variables.
-                    A kubernetes service account credential needs to be present in
-                    /var/run/secrets/kubernetes.io/serviceaccount/token.
-
-                    Can be specified multiple times to add multiple secret"
-                })
-                .value_name("NAME")
-                .value_hint(ValueHint::Other)
-                .action(ArgAction::Append),
-        )
-        .arg(
-            Arg::new("file")
-                .short('f')
-                .long("file")
-                .help("Add a file as a data source")
-                .long_help(indoc! {
-                    "Add a file as a data source. The file must be a valid JSON, YAML, TOML, ini,
-                    JSON5 or RON file. The file format is guessed using its file extension.
-                    
-                    Can be specified multiple times to add multiple file data sources"
-                })
-                .value_name("PATH")
-                .value_hint(ValueHint::FilePath)
-                .action(ArgAction::Append),
-        )
         .group(
             ArgGroup::new("datasources")
-                .args(["k8s-configmap", "k8s-secret", "environment", "file"])
+                .args([
+                    #[cfg(feature = "k8s")]
+                    "k8s-configmap",
+                    #[cfg(feature = "k8s")]
+                    "k8s-secret",
+                    #[cfg(feature = "file")]
+                    "file",
+                    "environment",
+                ])
                 .multiple(true),
         )
         .arg(
@@ -558,6 +560,21 @@ fn command() -> Command {
                 .action(ArgAction::Append)
                 .conflicts_with("output")
                 .conflicts_with("input"),
+        )
+        .arg(
+            Arg::new("additional-templates")
+                .long("additional-templates")
+                .short('a')
+                .action(ArgAction::Set)
+                .value_name("DIRECTORY")
+                .num_args(1)
+                .value_hint(ValueHint::DirPath)
+                .help("Directory from which additional templates are loaded.")
+                .long_help(indoc! {
+                    "Directory from which additional templates are loaded.
+
+                    Needed for 'extends', 'include' and 'import' tags."
+                }),
         )
         .arg(
             Arg::new("input")
@@ -689,7 +706,100 @@ fn command() -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Run as a daemon")
                 .requires("watch"),
+        );
+
+    #[cfg(feature = "file")]
+    {
+        command = command.arg(
+            Arg::new("file")
+                .short('f')
+                .long("file")
+                .help("Add a file as a data source")
+                .long_help(indoc! {
+                    "Add a file as a data source. The file must be a valid JSON, YAML, TOML, ini,
+                    JSON5 or RON file. The file format is guessed using its file extension.
+
+                    Can be specified multiple times to add multiple file data sources"
+                })
+                .value_name("PATH")
+                .value_hint(ValueHint::FilePath)
+                .action(ArgAction::Append),
         )
+    }
+
+    #[cfg(feature = "k8s")]
+    {
+        command = command
+            .arg(
+                Arg::new("k8s-namespace")
+                    .long("k8s-namespace")
+                    .alias("ns")
+                    .help("Specify a k8s namespace to use")
+                    .long_help(indoc! {
+                        "When using k8s datasources, specify a namespace to use"
+                    })
+                    .value_name("NAME")
+                    .value_hint(ValueHint::Other)
+                    .action(ArgAction::Set),
+            )
+            .arg(
+                Arg::new("k8s-configmap")
+                    .long("k8s-configmap")
+                    .alias("cm")
+                    .help("Add a kubernetes configmap as data source")
+                    .long_help(indoc! {
+                        "Add a kubernetes configmap as a data source for template variables.
+                    A kubernetes service account credential needs to be present in
+                    /var/run/secrets/kubernetes.io/serviceaccount/token.
+
+                    Can be specified multiple times to add multiple config maps"
+                    })
+                    .value_name("NAME")
+                    .value_hint(ValueHint::Other)
+                    .action(ArgAction::Append),
+            )
+            .arg(
+                Arg::new("k8s-secret")
+                    .long("k8s-secret")
+                    .help("Add a kubernetes secret as data source")
+                    .long_help(indoc! {
+                        "Add a kubernetes secret as a data source for template variables.
+                    A kubernetes service account credential needs to be present in
+                    /var/run/secrets/kubernetes.io/serviceaccount/token.
+
+                    Can be specified multiple times to add multiple secret"
+                    })
+                    .value_name("NAME")
+                    .value_hint(ValueHint::Other)
+                    .action(ArgAction::Append),
+            );
+    }
+
+    #[cfg(feature = "poll")]
+    {
+        command = command.arg(
+            Arg::new("poll-interval")
+                .long("poll")
+                .short('p')
+                .help("Rerender the template in the given interval")
+                .requires("watch")
+                .value_name("INTERVAL")
+                .value_parser(ValueParser::new(HumanDurationParser {})),
+        )
+    }
+
+    #[cfg(feature = "webhook")]
+    {
+        command = command.arg(
+            Arg::new("webhook")
+                .long("webhook")
+                .short('H')
+                .help("Listen on the given address, reloading on HTTP request")
+                .requires("watch")
+                .value_name("LISTEN"),
+        )
+    }
+    command
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -726,6 +836,28 @@ impl From<&InPlace> for bool {
             InPlace::WithoutSuffix => true,
             InPlace::WithSuffix(_) => true,
         }
+    }
+}
+
+#[cfg(feature = "poll")]
+#[derive(Clone)]
+struct HumanDurationParser {}
+
+#[cfg(feature = "poll")]
+impl TypedValueParser for HumanDurationParser {
+    type Value = tokio::time::Duration;
+
+    fn parse_ref(
+        &self,
+        _cmd: &clap::Command,
+        _arg: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> std::result::Result<Self::Value, clap::Error> {
+        let s = value
+            .to_str()
+            .ok_or(clap::Error::new(clap::error::ErrorKind::InvalidUtf8))?;
+        humantime::parse_duration(s)
+            .map_err(|_| clap::Error::new(clap::error::ErrorKind::InvalidValue))
     }
 }
 
@@ -872,39 +1004,45 @@ mod tests {
     fn no_template_args_and_positional_args() {
         assert!(Cli::new_from(vec!["contemplate", "--template", "in1", "--", "in2"]).is_err());
         assert!(Cli::new_from(vec!["contemplate", "--template", "in1", "out1", "in2"]).is_err());
-        assert!(Cli::new_from(vec![
-            "contemplate",
-            "--template",
-            "in1",
-            "out1",
-            "--output",
-            "out2"
-        ])
-        .is_err());
+        assert!(
+            Cli::new_from(vec![
+                "contemplate",
+                "--template",
+                "in1",
+                "out1",
+                "--output",
+                "out2"
+            ])
+            .is_err()
+        );
     }
 
     #[test]
     fn no_duplicate_destinations() {
         assert!(Cli::new_from(vec!["contemplate", "in1", "in2"]).is_err());
         assert!(Cli::new_from(vec!["contemplate", "--output", "out", "in1", "in2"]).is_err());
-        assert!(Cli::new_from(vec![
-            "contemplate",
-            "--template",
-            "in1",
-            "--template",
-            "in2"
-        ])
-        .is_err());
-        assert!(Cli::new_from(vec![
-            "contemplate",
-            "--template",
-            "in1",
-            "out",
-            "--template",
-            "in2",
-            "out"
-        ])
-        .is_err());
+        assert!(
+            Cli::new_from(vec![
+                "contemplate",
+                "--template",
+                "in1",
+                "--template",
+                "in2"
+            ])
+            .is_err()
+        );
+        assert!(
+            Cli::new_from(vec![
+                "contemplate",
+                "--template",
+                "in1",
+                "out",
+                "--template",
+                "in2",
+                "out"
+            ])
+            .is_err()
+        );
     }
 
     #[test]

@@ -4,16 +4,17 @@ use std::path::Path;
 
 use crate::error::Result;
 use itertools::Itertools;
-use nix::sys::signal::{kill, Signal, SIGINT};
+use nix::sys::signal::{SIGINT, Signal, kill};
 use nix::unistd::Pid;
 use sysinfo::System;
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum OnReloadSignalTarget {
     Pid(Pid),
     ProcessName(OsString),
+    #[default]
     Parent,
 }
 
@@ -28,12 +29,6 @@ impl From<&OsStr> for OnReloadSignalTarget {
         }
 
         Self::ProcessName(s.to_owned())
-    }
-}
-
-impl Default for OnReloadSignalTarget {
-    fn default() -> Self {
-        Self::Parent
     }
 }
 
@@ -64,11 +59,11 @@ impl OnReload {
     /// Must be called from the context of a tokio runtime.
     async fn terminate_existing_child(&self) -> Result<()> {
         let mut child = self.child.lock().await;
-        if let Some(mut child) = child.take() {
-            if let Some(pid) = child.id() {
-                kill(Pid::from_raw(pid as _), SIGINT)?;
-                tokio::spawn(async move { child.wait().await });
-            }
+        if let Some(mut child) = child.take()
+            && let Some(pid) = child.id()
+        {
+            kill(Pid::from_raw(pid as _), SIGINT)?;
+            tokio::spawn(async move { child.wait().await });
         }
 
         Ok(())
@@ -124,17 +119,9 @@ impl OnReload {
                     OnReloadSignalTarget::ProcessName(name) => {
                         let sys = System::new_all();
 
-                        let processes = name
-                            .to_str()
-                            .map(|name| sys.processes_by_name(name))
-                            .map(|iter| -> Box<dyn Iterator<Item = &sysinfo::Process>> {
-                                Box::new(iter)
-                            })
-                            .unwrap_or(Box::new(std::iter::empty()));
-
-                        for process in processes {
+                        for process in sys.processes_by_name(name) {
                             log::debug!(
-                                "Sending signal {signal} to {} (PID {})",
+                                "Sending signal {signal} to {:?} (PID {})",
                                 process.name(),
                                 process.pid()
                             );

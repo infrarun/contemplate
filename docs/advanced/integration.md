@@ -18,6 +18,37 @@ contemplate --watch
 Software that does not take care of its own configuration file reloading will need to be notified of this change.
 Contemplate supports this using either signals or a custom reload hook.
 
+By default, re-renders in watch mode are triggered when an underlying data source changes (e.g. a watched file is modified or a Kubernetes ConfigMap is updated). Two additional trigger mechanisms are available for cases where data sources do not natively support change detection.
+
+### Poll Watcher
+
+The `--poll`/`-p` argument causes Contemplate to re-render at a fixed interval, regardless of whether a data source signals a change. This is useful for e.g. HTTP-based data (fetched via the `http()` template function) or other sources that do not emit change events.
+
+The interval is specified as a human-readable duration:
+
+```bash
+contemplate \
+    --watch \
+    --poll 30s \
+    --template config.template app.cfg
+```
+
+Supported duration units include `s` (seconds), `m` (minutes), `h` (hours), etc. Refer to the [humantime](https://docs.rs/humantime/latest/humantime/fn.parse_duration.html) documentation for more information.
+
+### Webhook Watcher
+
+The `--webhook`/`-H` argument starts a lightweight HTTP server that triggers a re-render whenever any HTTP request is received. This allows external systems to push change notifications to Contemplate.
+
+```bash
+contemplate \
+    --watch \
+    --webhook 0.0.0.0:9000 \
+    --template config.template app.cfg
+```
+
+Any HTTP request to `http://<host>:9000/` (regardless of method or path) will trigger a re-render.
+
+
 ### Signaling
 
 The `--on-reload-signal` argument takes two arguments: the signal to send, and the target process.
@@ -34,7 +65,7 @@ contemplate \
 ### Reload Hook
 
 If signaling is not sufficient to notify downstream software that the configuration has changed, a custom reload hook can be executed on reload.
-This is specified using the `--on-reload-command`/`-r` or `--on-reload-execute`/`-R` command-line options.
+This is specified using the `--on-reload-command`/`-r` or `--on-reload-exec`/`-R` command-line options.
 The difference between these two options is that `--on-reload-command` requires the presence of a shell interpreter, and takes a single string argument that is executed as a shell command, while `--on-reload-exec` takes a path to an executable.
 When executed, the `CONTEMPLATED_FILES` environment variable will be set to a comma-separated list of the changed files.
 
@@ -50,6 +81,18 @@ contemplate \
     When underlying data sources change rapidly, changes can be debounced by the on-reload hook by sleeping before notifying the target process.
     The on-reload hook will be terminated with the `SIGINT` signal before a new hook is executed.
     Implementors relying on this feature in combination with the `CONTEMPLATED_FILES` variable will need to account for previous values of `CONTEMPLATED_FILES` as well as inherent raciness.
+
+## Running as a Daemon
+
+The `--daemonize`/`-d` flag causes Contemplate to detach from the terminal and run in the background. This requires `--watch` to be specified as well, since daemonizing only makes sense for long-running watch mode operation.
+
+```bash
+contemplate \
+    --watch \
+    --daemonize \
+    --file data.yml \
+    --template config.template app.cfg
+```
 
 ## Waiting for Rendering to be Completed
 

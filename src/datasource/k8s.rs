@@ -2,18 +2,18 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use figment::{
+    Metadata, Profile, Provider,
     util::{map, nest},
     value::{Dict, Value},
-    Metadata, Profile, Provider,
 };
 use futures::StreamExt;
-use k8s_openapi::{api::core::v1, ByteString};
+use k8s_openapi::{ByteString, api::core::v1};
 use kube::{
-    runtime::{watcher, WatchStreamExt},
     Api, Client,
+    runtime::{WatchStreamExt, watcher},
 };
 
-use crate::error::Error;
+use crate::{error::Error, watch::Watch};
 
 use super::{Notifier, Source, ToDataSourceError};
 
@@ -55,12 +55,13 @@ impl Source for ConfigMap {
         let figment = figment.merge(data);
         Ok(figment)
     }
+}
 
+#[async_trait]
+impl Watch for ConfigMap {
     async fn watch(&mut self, notify: Notifier) {
-        // Replace with inspect_err when result_option_inspect is stabilized
-        let Ok(client) = Client::try_default().await.map_err(|e| {
+        let Ok(client) = Client::try_default().await.inspect_err(|e| {
             log::error!("Could not get k8s client: {e}");
-            e
         }) else {
             return;
         };
@@ -78,7 +79,7 @@ impl Source for ConfigMap {
             watcher(api, config)
                 .default_backoff()
                 .applied_objects()
-                .predicate_filter(kube::runtime::predicates::generation)
+                .predicate_filter(kube::runtime::predicates::generation, Default::default())
                 .for_each(|event| async {
                     if let Err(e) = event {
                         log::warn!("K8s watcher error: {e}");
@@ -168,12 +169,13 @@ impl Source for Secret {
         let figment = figment.merge(data);
         Ok(figment)
     }
+}
 
+#[async_trait]
+impl Watch for Secret {
     async fn watch(&mut self, notify: Notifier) {
-        // Replace with inspect_err when result_option_inspect is stabilized
-        let Ok(client) = Client::try_default().await.map_err(|e| {
+        let Ok(client) = Client::try_default().await.inspect_err(|e| {
             log::error!("Could not get k8s client: {e}");
-            e
         }) else {
             return;
         };
@@ -191,7 +193,7 @@ impl Source for Secret {
             watcher(api, config)
                 .default_backoff()
                 .applied_objects()
-                .predicate_filter(kube::runtime::predicates::generation)
+                .predicate_filter(kube::runtime::predicates::generation, Default::default())
                 .for_each(|event| async {
                     if let Err(e) = event {
                         log::warn!("K8s watcher error: {e}");
@@ -257,8 +259,8 @@ impl Provider for SecretProvider {
 // The following code is taken from figment, because it's not exposed there.
 // see: https://github.com/SergioBenitez/Figment/issues/74
 mod coalesce {
-    use figment::value::{Map, Value};
     use figment::Profile;
+    use figment::value::{Map, Value};
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     #[allow(dead_code)]

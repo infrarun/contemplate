@@ -18,7 +18,7 @@ pub enum Error {
     BackupWouldBeOverwritten(PathBuf),
 
     #[error("Figment error: {0}")]
-    FigmentError(#[from] figment::Error),
+    FigmentError(Box<figment::Error>),
 
     #[error("Argument error: {0}")]
     ClapError(#[from] clap::error::Error),
@@ -32,6 +32,7 @@ pub enum Error {
     #[error("Invalid signal argument")]
     CliInvalidSignal,
 
+    #[cfg(feature = "k8s")]
     #[error("K8s Error: {0}")]
     KubeError(#[from] kube::Error),
 
@@ -43,3 +44,10 @@ pub enum Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+// figment errors get boxed due to large size
+impl From<figment::Error> for Error {
+    fn from(err: figment::Error) -> Self {
+        Self::FigmentError(Box::new(err))
+    }
+}

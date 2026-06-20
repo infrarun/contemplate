@@ -80,9 +80,9 @@ impl TemplateSource {
     ///
     /// # Panics
     /// Panics if this template is not [cached](TemplateSource::Cached).
-    pub fn get_cached_name(&self) -> Cow<str> {
+    pub fn get_cached_name(&self) -> Cow<'_, str> {
         match self {
-            TemplateSource::Cached { ref name, .. } => name.to_string_lossy(),
+            TemplateSource::Cached { name, .. } => name.to_string_lossy(),
             _ => panic!("get_cached_name called on a non-cached template"),
         }
     }
@@ -137,7 +137,7 @@ impl TemplateDestination {
         }
     }
 
-    pub fn path(&self) -> Cow<Path> {
+    pub fn path(&self) -> Cow<'_, Path> {
         match self {
             TemplateDestination::FileSystem(path) => Cow::Borrowed(path.as_ref()),
             TemplateDestination::StdOut => Cow::Owned(PathBuf::from("-")),
@@ -199,6 +199,7 @@ impl TemplateDestination {
                     .read(true)
                     .write(true)
                     .create(true)
+                    .truncate(false)
                     .open(path)?;
 
                 if self.diff(path, &mut f, &templated, log_diff)? {
@@ -316,7 +317,7 @@ impl TemplateOperation {
     pub fn apply(
         &mut self,
         env: &mut Environment,
-        ctx: &serde_json::Value,
+        ctx: &minijinja::Value,
         dry_run: bool,
         log_diff: bool,
     ) -> Result<bool> {
@@ -369,7 +370,7 @@ impl Plan {
     pub fn execute(
         &mut self,
         env: &mut Environment,
-        ctx: &serde_json::Value,
+        ctx: &minijinja::Value,
         dry_run: bool,
         log_diff: bool,
     ) -> Vec<&TemplateOperation> {
@@ -401,7 +402,7 @@ impl Plan {
     pub fn try_execute(
         &mut self,
         env: &mut Environment,
-        ctx: &serde_json::Value,
+        ctx: &minijinja::Value,
         dry_run: bool,
         log_diff: bool,
     ) -> Result<Vec<&TemplateOperation>> {
@@ -409,13 +410,10 @@ impl Plan {
             .operations
             .iter_mut()
             .filter_map(|operation| {
-                match operation.apply(env, ctx, dry_run, log_diff).map(|changed| {
-                    if changed {
-                        Some(&*operation)
-                    } else {
-                        None
-                    }
-                }) {
+                match operation
+                    .apply(env, ctx, dry_run, log_diff)
+                    .map(|changed| if changed { Some(&*operation) } else { None })
+                {
                     Ok(None) => None,
                     Ok(Some(t)) => Some(Ok(t)),
                     Err(e) => Some(Err(e)),

@@ -1,63 +1,98 @@
 [package]
 name = "contemplate"
 version = "1.1.1"
-edition = "2021"
-license-file = "LICENSE"
+edition = "2024"
+license = "MIT"
 repository = "https://github.com/infrarun/contemplate"
 authors = [
     "infra.run",
     "Fabian Freyer <fabs@infra.run>",
+    "Markus Otto <zuntrax@infra.run>",
 ]
 description = "A template rendering tool designed to render configuration templates."
 categories = ["command-line-utilities", "config", "template-engine"]
 keywords = ["templating", "config-management", "kubernetes"]
 exclude = [".*"]
-rust-version = "1.72"
+rust-version = "1.96"
+
+[features]
+default = ["k8s", "file", "yaml", "toml", "jsonpath", "poll", "webhook", "http"]
+k8s = ["dep:k8s-openapi", "dep:kube"]
+file = ["dep:toml", "dep:serde_yaml"]
+yaml = ["dep:serde_yaml"]
+toml = ["dep:toml"]
+jsonpath = ["dep:jsonpath-rust"]
+poll = ["dep:humantime"]
+webhook = ["dep:axum"]
+http = ["dep:http", "dep:reqwest", "dep:arc-swap", "dep:mime", "dep:encoding_rs"]
 
 [dependencies]
 indoc = "2.0.1"
-shadow-rs = "0.26.0"
-thiserror = "1.0.40"
+shadow-rs = "2.0.0"
+thiserror = "2.0.18"
 serde_json = "1.0.96"
 log = "0.4.19"
 pretty_env_logger = "0.5.0"
-notify = "6.0.0"
-similar = "2.2.1"
-chrono = "0.4.26"
+notify = "8.2.0"
+similar = "3.1.1"
+chrono = "0.4.37"
 file_diff = "1.0.0"
-colored = "2.0.0"
-which = "5.0.0"
+colored = "3.1.1"
+which = "8.0.4"
 prctl = "1.0.0"
 daemonize = "0.5.0"
 async-trait = "0.1.68"
 futures = "0.3.28"
-base64 = "0.21.2"
+base64 = "0.22.1"
 hex = "0.4.3"
-clap_complete = "4.3.1"
-serde_yaml = "0.9.25"
-toml = "0.8.8"
+clap_complete = "4.5.1"
 num_cpus = "1.16.0"
-itertools = "0.12.0"
+itertools = "0.15.0"
+
+[dependencies.humantime]
+version = "2.1.0"
+optional = true
+
+[dependencies.axum]
+version = "0.8.9"
+optional = true
+
+[dependencies.jsonpath-rust]
+version = "1.0.4"
+optional = true
+
+[dependencies.toml]
+version = "1.1.2"
+optional = true
+
+[dependencies.serde_yaml]
+version = "0.9.25"
+optional = true
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
 
 [dependencies.sysinfo]
-version = "0.30.5"
-default_features = false
+version = "0.39.3"
+default-features = false
+features = ["system"]
 
 [dependencies.nix]
-version = "0.27.1"
-default_features = false
+version = "0.31.3"
+default-features = false
 features = ["process", "signal"]
 
 [dependencies.clap]
-version = "4.2.2"
+version = "4.4.18"
 features = ["color"]
 
 [dependencies.figment]
-version = "0.10.8"
+version = "0.10.14"
 features = ["env", "toml", "yaml", "json"]
 
 [dependencies.minijinja]
-version = "1.0.0"
+version = "2.21.0"
 features = ["loader", "json", "urlencode", "custom_syntax"]
 
 [dependencies.tokio]
@@ -65,23 +100,46 @@ version = "1.28.2"
 features = ["rt-multi-thread", "sync", "process"]
 
 [dependencies.kube]
-version = "0.87.2"
-default_features = false
+version = "4.0.0"
+default-features = false
 features = [
     "client",
     "runtime",
     "rustls-tls",
     "unstable-runtime",
 ]
+optional = true
 
 [dependencies.k8s-openapi]
-version = "0.20.0"
+version = "0.28.0"
 features = [
-    "v1_26"
+    "v1_32"
 ]
+optional = true
+
+[dependencies.reqwest]
+version = "0.13.4"
+features = ["json"]
+optional = true
+
+[dependencies.http]
+version = "1.1.0"
+optional = true
+
+[dependencies.arc-swap]
+version = "1.7.1"
+optional = true
+
+[dependencies.mime]
+version = "0.3.17"
+optional = true
+
+[dependencies.encoding_rs]
+version = "0.8.34"
+optional = true
 
 [build-dependencies]
-shadow-rs = "0.26.0"
+shadow-rs = "2.0.0"
 
 [profile.release]
 lto = true
