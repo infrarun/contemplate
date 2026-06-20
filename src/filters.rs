@@ -1,6 +1,6 @@
 use base64::Engine as _;
 use hex::ToHex;
-use minijinja::value::Value;
+use minijinja::value::{Value, ValueKind};
 use minijinja::{Environment, Error, ErrorKind};
 
 pub fn register(env: &mut Environment) {
@@ -16,9 +16,9 @@ fn value_as_bytes(value: &Value) -> Result<Vec<u8>, Error> {
         return Ok(string.as_bytes().into());
     }
 
-    if let Some(seq) = value.as_seq() {
-        let bytes = seq
-            .iter()
+    if matches!(value.kind(), ValueKind::Seq | ValueKind::Iterable) {
+        let bytes = value
+            .try_iter()?
             .map(|it| {
                 if it.is_number() {
                     u8::try_from(it).map_err(|_| {

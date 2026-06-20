@@ -59,7 +59,7 @@ version = "0.10.14"
 features = ["env", "toml", "yaml", "json"]
 
 [dependencies.minijinja]
-version = "1.0.18"
+version = "2.21.0"
 features = ["loader", "json", "urlencode", "custom_syntax"]
 
 [dependencies.tokio]
