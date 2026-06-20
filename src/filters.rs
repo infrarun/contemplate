@@ -41,7 +41,7 @@ fn value_as_bytes(value: &Value) -> Result<Vec<u8>, Error> {
 
     Err(Error::new(
         ErrorKind::InvalidOperation,
-        "Invalid input for base64",
+        "Invalid type (can't get byte stream)",
     ))
 }
 
@@ -147,6 +147,14 @@ mod tests {
     }
 
     #[test]
+    fn test_base64encode_boolean() {
+        let value = Value::from_serialize(false);
+        let error = base64encode(&value).unwrap_err();
+        assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
+        assert_eq!(error.detail(), Some("Invalid type (can't get byte stream)"));
+    }
+
+    #[test]
     fn test_hexencode_string() {
         let value = Value::from_safe_string("Hello".into());
         let hex = hexencode(&value).unwrap();
@@ -174,5 +182,13 @@ mod tests {
         let error = hexencode(&value).unwrap_err();
         assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
         assert_eq!(error.detail(), Some("Invalid sequence (not numeric)!"));
+    }
+
+    #[test]
+    fn test_hexencode_boolean() {
+        let value = Value::from_serialize(false);
+        let error = hexencode(&value).unwrap_err();
+        assert_eq!(error.kind(), minijinja::ErrorKind::InvalidOperation);
+        assert_eq!(error.detail(), Some("Invalid type (can't get byte stream)"));
     }
 }
