@@ -10,10 +10,11 @@ use sysinfo::System;
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum OnReloadSignalTarget {
     Pid(Pid),
     ProcessName(OsString),
+    #[default]
     Parent,
 }
 
@@ -28,12 +29,6 @@ impl From<&OsStr> for OnReloadSignalTarget {
         }
 
         Self::ProcessName(s.to_owned())
-    }
-}
-
-impl Default for OnReloadSignalTarget {
-    fn default() -> Self {
-        Self::Parent
     }
 }
 
