@@ -80,7 +80,7 @@ impl TemplateSource {
     ///
     /// # Panics
     /// Panics if this template is not [cached](TemplateSource::Cached).
-    pub fn get_cached_name(&self) -> Cow<str> {
+    pub fn get_cached_name(&self) -> Cow<'_, str> {
         match self {
             TemplateSource::Cached { ref name, .. } => name.to_string_lossy(),
             _ => panic!("get_cached_name called on a non-cached template"),
@@ -137,7 +137,7 @@ impl TemplateDestination {
         }
     }
 
-    pub fn path(&self) -> Cow<Path> {
+    pub fn path(&self) -> Cow<'_, Path> {
         match self {
             TemplateDestination::FileSystem(path) => Cow::Borrowed(path.as_ref()),
             TemplateDestination::StdOut => Cow::Owned(PathBuf::from("-")),
