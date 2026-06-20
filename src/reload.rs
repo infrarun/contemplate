@@ -59,12 +59,11 @@ impl OnReload {
     /// Must be called from the context of a tokio runtime.
     async fn terminate_existing_child(&self) -> Result<()> {
         let mut child = self.child.lock().await;
-        if let Some(mut child) = child.take() {
-            if let Some(pid) = child.id() {
+        if let Some(mut child) = child.take()
+            && let Some(pid) = child.id() {
                 kill(Pid::from_raw(pid as _), SIGINT)?;
                 tokio::spawn(async move { child.wait().await });
             }
-        }
 
         Ok(())
     }
