@@ -82,7 +82,7 @@ impl TemplateSource {
     /// Panics if this template is not [cached](TemplateSource::Cached).
     pub fn get_cached_name(&self) -> Cow<'_, str> {
         match self {
-            TemplateSource::Cached { ref name, .. } => name.to_string_lossy(),
+            TemplateSource::Cached { name, .. } => name.to_string_lossy(),
             _ => panic!("get_cached_name called on a non-cached template"),
         }
     }

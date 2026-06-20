@@ -1,7 +1,7 @@
 [package]
 name = "contemplate"
 version = "1.1.0"
-edition = "2021"
+edition = "2024"
 license-file = "LICENSE"
 repository = "https://github.com/infrarun/contemplate"
 authors = [
@@ -13,7 +13,7 @@ description = "A template rendering tool designed to render configuration templa
 categories = ["command-line-utilities", "config", "template-engine"]
 keywords = ["templating", "config-management", "kubernetes"]
 exclude = [".*"]
-rust-version = "1.76"
+rust-version = "1.96"
 
 [dependencies]
 indoc = "2.0.1"
