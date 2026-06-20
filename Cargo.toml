@@ -2,7 +2,7 @@
 name = "contemplate"
 version = "1.1.0"
 edition = "2024"
-license-file = "LICENSE"
+license = "MIT"
 repository = "https://github.com/infrarun/contemplate"
 authors = [
     "infra.run",
