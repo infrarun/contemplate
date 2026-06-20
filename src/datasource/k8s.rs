@@ -76,7 +76,7 @@ impl Source for ConfigMap {
             watcher(api, config)
                 .default_backoff()
                 .applied_objects()
-                .predicate_filter(kube::runtime::predicates::generation)
+                .predicate_filter(kube::runtime::predicates::generation, Default::default())
                 .for_each(|event| async {
                     if let Err(e) = event {
                         log::warn!("K8s watcher error: {e}");
@@ -187,7 +187,7 @@ impl Source for Secret {
             watcher(api, config)
                 .default_backoff()
                 .applied_objects()
-                .predicate_filter(kube::runtime::predicates::generation)
+                .predicate_filter(kube::runtime::predicates::generation, Default::default())
                 .for_each(|event| async {
                     if let Err(e) = event {
                         log::warn!("K8s watcher error: {e}");
