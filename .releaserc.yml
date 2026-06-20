@@ -32,6 +32,6 @@ plugins:
       - "CHANGELOG.md"
   -
     - "@semantic-release-plus/docker"
-    - name: infrarun/contemplate
+    - name: ghcr.io/infrarun/contemplate:releng
       registry: ghcr.io
       skipLogin: true
