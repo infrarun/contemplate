@@ -1,7 +1,7 @@
 use super::Source;
 use crate::datasource::Result;
 use async_trait::async_trait;
-use figment::{providers::Env, Figment};
+use figment::{Figment, providers::Env};
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Environment {

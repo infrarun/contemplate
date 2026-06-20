@@ -9,8 +9,8 @@ use crate::error::{Error, Result};
 use crate::plan::{Plan, TemplateDestination, TemplateOperation, TemplateSource};
 use crate::reload::{OnReloadAction, OnReloadSignalTarget};
 use clap::error::ErrorKind;
-use clap::{value_parser, Arg, ArgAction, ArgGroup, ArgMatches, Command, ValueHint};
-use clap_complete::{generate, Generator, Shell};
+use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command, ValueHint, value_parser};
+use clap_complete::{Generator, Shell, generate};
 use indoc::indoc;
 use nix::sys::signal::Signal;
 use shadow_rs::shadow;
@@ -391,7 +391,12 @@ impl Cli {
 }
 
 fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
-    generate(generator, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+    generate(
+        generator,
+        cmd,
+        cmd.get_name().to_string(),
+        &mut std::io::stdout(),
+    );
 }
 
 fn command() -> Command {
@@ -867,39 +872,45 @@ mod tests {
     fn no_template_args_and_positional_args() {
         assert!(Cli::new_from(vec!["contemplate", "--template", "in1", "--", "in2"]).is_err());
         assert!(Cli::new_from(vec!["contemplate", "--template", "in1", "out1", "in2"]).is_err());
-        assert!(Cli::new_from(vec![
-            "contemplate",
-            "--template",
-            "in1",
-            "out1",
-            "--output",
-            "out2"
-        ])
-        .is_err());
+        assert!(
+            Cli::new_from(vec![
+                "contemplate",
+                "--template",
+                "in1",
+                "out1",
+                "--output",
+                "out2"
+            ])
+            .is_err()
+        );
     }
 
     #[test]
     fn no_duplicate_destinations() {
         assert!(Cli::new_from(vec!["contemplate", "in1", "in2"]).is_err());
         assert!(Cli::new_from(vec!["contemplate", "--output", "out", "in1", "in2"]).is_err());
-        assert!(Cli::new_from(vec![
-            "contemplate",
-            "--template",
-            "in1",
-            "--template",
-            "in2"
-        ])
-        .is_err());
-        assert!(Cli::new_from(vec![
-            "contemplate",
-            "--template",
-            "in1",
-            "out",
-            "--template",
-            "in2",
-            "out"
-        ])
-        .is_err());
+        assert!(
+            Cli::new_from(vec![
+                "contemplate",
+                "--template",
+                "in1",
+                "--template",
+                "in2"
+            ])
+            .is_err()
+        );
+        assert!(
+            Cli::new_from(vec![
+                "contemplate",
+                "--template",
+                "in1",
+                "out",
+                "--template",
+                "in2",
+                "out"
+            ])
+            .is_err()
+        );
     }
 
     #[test]

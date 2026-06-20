@@ -2,15 +2,15 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use figment::{
+    Metadata, Profile, Provider,
     util::{map, nest},
     value::{Dict, Value},
-    Metadata, Profile, Provider,
 };
 use futures::StreamExt;
-use k8s_openapi::{api::core::v1, ByteString};
+use k8s_openapi::{ByteString, api::core::v1};
 use kube::{
-    runtime::{watcher, WatchStreamExt},
     Api, Client,
+    runtime::{WatchStreamExt, watcher},
 };
 
 use crate::error::Error;
@@ -253,8 +253,8 @@ impl Provider for SecretProvider {
 // The following code is taken from figment, because it's not exposed there.
 // see: https://github.com/SergioBenitez/Figment/issues/74
 mod coalesce {
-    use figment::value::{Map, Value};
     use figment::Profile;
+    use figment::value::{Map, Value};
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     #[allow(dead_code)]

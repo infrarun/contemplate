@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::error::Result;
 use itertools::Itertools;
-use nix::sys::signal::{kill, Signal, SIGINT};
+use nix::sys::signal::{SIGINT, Signal, kill};
 use nix::unistd::Pid;
 use sysinfo::System;
 use tokio::process::{Child, Command};
@@ -60,10 +60,11 @@ impl OnReload {
     async fn terminate_existing_child(&self) -> Result<()> {
         let mut child = self.child.lock().await;
         if let Some(mut child) = child.take()
-            && let Some(pid) = child.id() {
-                kill(Pid::from_raw(pid as _), SIGINT)?;
-                tokio::spawn(async move { child.wait().await });
-            }
+            && let Some(pid) = child.id()
+        {
+            kill(Pid::from_raw(pid as _), SIGINT)?;
+            tokio::spawn(async move { child.wait().await });
+        }
 
         Ok(())
     }

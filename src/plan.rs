@@ -410,13 +410,10 @@ impl Plan {
             .operations
             .iter_mut()
             .filter_map(|operation| {
-                match operation.apply(env, ctx, dry_run, log_diff).map(|changed| {
-                    if changed {
-                        Some(&*operation)
-                    } else {
-                        None
-                    }
-                }) {
+                match operation
+                    .apply(env, ctx, dry_run, log_diff)
+                    .map(|changed| if changed { Some(&*operation) } else { None })
+                {
                     Ok(None) => None,
                     Ok(Some(t)) => Some(Ok(t)),
                     Err(e) => Some(Err(e)),

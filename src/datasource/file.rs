@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use figment::{
-    providers::{Format, Json, Toml, YamlExtended},
     Figment,
+    providers::{Format, Json, Toml, YamlExtended},
 };
 
 use notify::{Config, EventKind, RecommendedWatcher, Watcher};
@@ -42,13 +42,13 @@ impl Source for File {
                 return Err(Error::UnknownFileExtension {
                     ext: ext.to_owned(),
                 })
-                .fatal()
+                .fatal();
             }
             None => {
                 return Err(Error::UnknownFileType {
                     path: self.path.to_owned(),
                 })
-                .fatal()
+                .fatal();
             }
         };
 

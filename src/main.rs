@@ -14,7 +14,7 @@ pub mod reload;
 use futures::FutureExt;
 use reload::OnReload;
 
-use nix::unistd::{execv, fork, ForkResult};
+use nix::unistd::{ForkResult, execv, fork};
 use std::{ffi::CString, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
