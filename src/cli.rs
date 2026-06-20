@@ -114,15 +114,14 @@ impl Cli {
         let mut sources = ["file", "environment", "k8s-configmap", "k8s-secret"]
             .into_iter()
             .flat_map(|source_type| {
-                let files = std::iter::zip(
+                std::iter::zip(
                     self.matches
                         .get_occurrences::<String>(source_type)
                         .unwrap_or_default()
                         .map(|mut occurrence| occurrence.next()),
                     self.matches.indices_of(source_type).unwrap_or_default(),
                 )
-                .map(move |(value, index)| (source_type, value, index));
-                files
+                .map(move |(value, index)| (source_type, value, index))
             })
             .collect::<Vec<(&str, Option<&String>, usize)>>();
 
