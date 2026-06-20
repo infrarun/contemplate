@@ -109,14 +109,14 @@ pub fn from_toml(value: &Value) -> Result<Value, Error> {
         ));
     };
 
-    let value: toml::Value = value.parse().map_err(|e| {
+    let table: toml::Table = value.parse().map_err(|e| {
         Error::new(
             ErrorKind::BadSerialization,
             format!("Could not deserialize: {e}"),
         )
     })?;
 
-    let value = Value::from_serialize(value);
+    let value = Value::from_serialize(table);
     Ok(value)
 }
 
