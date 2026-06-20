@@ -45,7 +45,7 @@ version = "0.30.5"
 default-features = false
 
 [dependencies.nix]
-version = "0.27.1"
+version = "0.31.3"
 default-features = false
 features = ["process", "signal"]
 
