@@ -7,6 +7,7 @@ repository = "https://github.com/infrarun/contemplate"
 authors = [
     "infra.run",
     "Fabian Freyer <fabs@infra.run>",
+    "Markus Otto <zuntrax@infra.run>",
 ]
 description = "A template rendering tool designed to render configuration templates."
 categories = ["command-line-utilities", "config", "template-engine"]
