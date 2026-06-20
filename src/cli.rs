@@ -126,7 +126,7 @@ impl Cli {
             })
             .collect::<Vec<(&str, Option<&String>, usize)>>();
 
-        sources.sort_by(|(_, _, a), (_, _, b)| a.cmp(b));
+        sources.sort_by_key(|(_, _, a)| *a);
 
         let sources_from_args =
             sources
