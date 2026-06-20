@@ -1,6 +1,6 @@
 [package]
 name = "contemplate"
-version = "1.1.1"
+version = "2.0.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/infrarun/contemplate"
