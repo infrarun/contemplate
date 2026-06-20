@@ -41,8 +41,9 @@ num_cpus = "1.16.0"
 itertools = "0.15.0"
 
 [dependencies.sysinfo]
-version = "0.30.5"
+version = "0.39.3"
 default-features = false
+features = ["system"]
 
 [dependencies.nix]
 version = "0.31.3"

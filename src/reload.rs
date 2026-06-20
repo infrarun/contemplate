@@ -119,17 +119,9 @@ impl OnReload {
                     OnReloadSignalTarget::ProcessName(name) => {
                         let sys = System::new_all();
 
-                        let processes = name
-                            .to_str()
-                            .map(|name| sys.processes_by_name(name))
-                            .map(|iter| -> Box<dyn Iterator<Item = &sysinfo::Process>> {
-                                Box::new(iter)
-                            })
-                            .unwrap_or(Box::new(std::iter::empty()));
-
-                        for process in processes {
+                        for process in sys.processes_by_name(name) {
                             log::debug!(
-                                "Sending signal {signal} to {} (PID {})",
+                                "Sending signal {signal} to {:?} (PID {})",
                                 process.name(),
                                 process.pid()
                             );
