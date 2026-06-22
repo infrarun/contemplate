@@ -45,7 +45,7 @@ jobs:
             cross: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install build inputs
         if: runner.os == 'Linux' && !matrix.build.cross
@@ -121,7 +121,7 @@ jobs:
       packages: write # to be able to publish a package
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 'Login to GitHub Container Registry'
         uses: docker/login-action@v3
